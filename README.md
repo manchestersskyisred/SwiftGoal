@@ -1,14 +1,5 @@
-# JAVA FINAL
-
-这是我2025大二下学期的java编程基础课的大作业
-
-
-
 ## Quick Start
 
-```bash
-cd Java-final-homework/src/main/java/com/sportslens/ai/SportsLensAiApplication.java
-```
 
 environment:
 
