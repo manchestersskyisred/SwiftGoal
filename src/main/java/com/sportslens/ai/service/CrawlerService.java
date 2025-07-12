@@ -82,17 +82,28 @@ public class CrawlerService {
                 article.setPublishDate(LocalDateTime.now());
 
                 try {
-                    String content = getContentWithBoilerpipe(absoluteUrl, espnRssUrl);
+                    Document articleDoc = getDocumentWithRetries(absoluteUrl, espnRssUrl);
+                    article.setRawHtmlContent(articleDoc.body().html()); // Save raw HTML
+                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html()); // Extract clean text
                     article.setRawContent(content);
 
                     // AI Analysis
                     if (content.length() > 50) { // Only analyze if content is substantial
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
+                        // 1. Full content translation
+                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        if (translatedHtml != null && !translatedHtml.isBlank()) {
+                            article.setTranslatedContent(translatedHtml);
+                            logger.info("Full content translation successful for: {}", article.getTitle());
+                        }
+
+                        // 2. Summary, keywords, and category analysis
                         AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
                         if (analysisResult != null) {
                             article.setTitleCn(analysisResult.getTranslatedTitle());
                             article.setSummaryAiCn(analysisResult.getChineseSummary());
                             article.setKeywordsAi(analysisResult.getKeywords());
+                            article.setCategoryAi(analysisResult.getPartition());
                             logger.info("AI analysis successful for: {}", article.getTitle());
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
@@ -141,17 +152,28 @@ public class CrawlerService {
                 article.setPublishDate(LocalDateTime.now());
 
                 try {
-                    String content = getContentWithBoilerpipe(absoluteUrl, tmRssUrl);
+                    Document articleDoc = getDocumentWithRetries(absoluteUrl, tmRssUrl);
+                    article.setRawHtmlContent(articleDoc.body().html()); // Save raw HTML
+                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html()); // Extract clean text
                     article.setRawContent(content);
                     
                     // AI Analysis
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
+                        // 1. Full content translation
+                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        if (translatedHtml != null && !translatedHtml.isBlank()) {
+                            article.setTranslatedContent(translatedHtml);
+                            logger.info("Full content translation successful for: {}", article.getTitle());
+                        }
+
+                        // 2. Summary, keywords, and category analysis
                         AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
                         if (analysisResult != null) {
                             article.setTitleCn(analysisResult.getTranslatedTitle());
                             article.setSummaryAiCn(analysisResult.getChineseSummary());
                             article.setKeywordsAi(analysisResult.getKeywords());
+                            article.setCategoryAi(analysisResult.getPartition());
                             logger.info("AI analysis successful for: {}", article.getTitle());
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
@@ -200,16 +222,27 @@ public class CrawlerService {
                 article.setPublishDate(LocalDateTime.now());
 
                 try {
-                    String content = getContentWithBoilerpipe(absoluteUrl, absoluteUrl);
+                    Document articleDoc = getDocumentWithRetries(absoluteUrl, absoluteUrl);
+                    article.setRawHtmlContent(articleDoc.body().html());
+                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
                     article.setRawContent(content);
 
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
+                        // 1. Full content translation
+                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        if (translatedHtml != null && !translatedHtml.isBlank()) {
+                            article.setTranslatedContent(translatedHtml);
+                            logger.info("Full content translation successful for: {}", article.getTitle());
+                        }
+
+                        // 2. Summary, keywords, and category analysis
                         AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
                         if (analysisResult != null) {
                             article.setTitleCn(analysisResult.getTranslatedTitle());
                             article.setSummaryAiCn(analysisResult.getChineseSummary());
                             article.setKeywordsAi(analysisResult.getKeywords());
+                            article.setCategoryAi(analysisResult.getPartition());
                             logger.info("AI analysis successful for: {}", article.getTitle());
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
@@ -258,17 +291,28 @@ public class CrawlerService {
                 article.setPublishDate(LocalDateTime.now());
 
                 try {
-                    String content = getContentWithBoilerpipe(absoluteUrl, skyRssUrl);
+                    Document articleDoc = getDocumentWithRetries(absoluteUrl, skyRssUrl);
+                    article.setRawHtmlContent(articleDoc.body().html());
+                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
                     article.setRawContent(content);
 
                     // AI Analysis
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
+                        // 1. Full content translation
+                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        if (translatedHtml != null && !translatedHtml.isBlank()) {
+                            article.setTranslatedContent(translatedHtml);
+                            logger.info("Full content translation successful for: {}", article.getTitle());
+                        }
+
+                        // 2. Summary, keywords, and category analysis
                         AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
                         if (analysisResult != null) {
                             article.setTitleCn(analysisResult.getTranslatedTitle());
                             article.setSummaryAiCn(analysisResult.getChineseSummary());
                             article.setKeywordsAi(analysisResult.getKeywords());
+                            article.setCategoryAi(analysisResult.getPartition());
                             logger.info("AI analysis successful for: {}", article.getTitle());
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
@@ -318,17 +362,28 @@ public class CrawlerService {
                 article.setPublishDate(LocalDateTime.now());
 
                 try {
-                    String content = getContentWithBoilerpipe(absoluteUrl, foxRssUrl);
+                    Document articleDoc = getDocumentWithRetries(absoluteUrl, foxRssUrl);
+                    article.setRawHtmlContent(articleDoc.body().html());
+                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
                     article.setRawContent(content);
 
                     // AI Analysis
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
+                        // 1. Full content translation
+                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        if (translatedHtml != null && !translatedHtml.isBlank()) {
+                            article.setTranslatedContent(translatedHtml);
+                            logger.info("Full content translation successful for: {}", article.getTitle());
+                        }
+
+                        // 2. Summary, keywords, and category analysis
                         AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
                         if (analysisResult != null) {
                             article.setTitleCn(analysisResult.getTranslatedTitle());
                             article.setSummaryAiCn(analysisResult.getChineseSummary());
                             article.setKeywordsAi(analysisResult.getKeywords());
+                            article.setCategoryAi(analysisResult.getPartition());
                             logger.info("AI analysis successful for: {}", article.getTitle());
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
@@ -351,64 +406,27 @@ public class CrawlerService {
         return USER_AGENTS.get(RANDOM.nextInt(USER_AGENTS.size()));
     }
 
-    private String getContentWithBoilerpipe(String url, String referer) throws IOException {
-        int retries = 3;
-        while (retries > 0) {
-            try {
-                Document doc = getDocumentWithRetries(url, referer);
-                try {
-                    return ArticleExtractor.INSTANCE.getText(doc.html());
-                } catch (BoilerpipeProcessingException e) {
-                    logger.error("Boilerpipe failed to extract content from {}: {}", url, e.getMessage());
-                    return ""; // Return empty string on failure
-                }
-            } catch (IOException e) {
-                retries--;
-                if (retries == 0) {
-                    throw e;
-                }
-                logger.warn("Retrying connection to {} ({} retries left)", url, retries);
-                try {
-                    TimeUnit.SECONDS.sleep(5);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }
-        throw new IOException("Failed to fetch content from " + url + " after multiple retries");
-    }
-
     private Document getDocumentWithRetries(String url, String referer) throws IOException {
         int retries = 3;
-        int currentRetry = 0;
-        long delay = 2000; // 2 seconds
-
-        while (currentRetry < retries) {
+        IOException lastException = null;
+        for (int i = 0; i < retries; i++) {
             try {
+                // Add a small random delay to be less predictable
+                TimeUnit.MILLISECONDS.sleep(500 + RANDOM.nextInt(1000));
                 return Jsoup.connect(url)
-                        .proxy(null)
                         .userAgent(getRandomUserAgent())
                         .referrer(referer)
-                        .header("Accept-Language", "en-US,en;q=0.9")
-                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                        .header("Accept-Encoding", "gzip, deflate, br")
-                        .timeout(120000) // 120 seconds
                         .get();
             } catch (IOException e) {
-                currentRetry++;
-                logger.warn("Failed to fetch URL: {}. Retrying ({}/{}) after {}ms. Error: {}", url, currentRetry, retries, delay, e.getMessage());
-                if (currentRetry >= retries) {
-                    throw e; // rethrow the last exception
-                }
-                try {
-                    TimeUnit.MILLISECONDS.sleep(delay * currentRetry); // exponential backoff-like delay
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Crawler was interrupted during retry wait", ie);
-                }
+                lastException = e;
+                logger.warn("Attempt {} to fetch {} failed. Retrying...", i + 1, url);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("Crawling interrupted", e);
+                break;
             }
         }
-        throw new IOException("Failed to connect to " + url + " after multiple retries");
+        throw new IOException("Failed to fetch document from " + url + " after " + retries + " retries.", lastException);
     }
 
     private Document getXmlWithRetries(String url, String referer) throws IOException {
