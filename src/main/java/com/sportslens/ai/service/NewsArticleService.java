@@ -19,6 +19,15 @@ public class NewsArticleService {
     }
 
     public List<NewsArticle> searchArticles(String query) {
-        return newsArticleRepository.findByTitleContainingIgnoreCaseOrTitleCnContainingIgnoreCaseOrKeywordsAiContainingIgnoreCaseOrderByPublishDateDesc(query, query, query);
+        return newsArticleRepository.searchByTitleOrSummary(query);
     }
+
+    public List<String> findDistinctCategories() {
+        return newsArticleRepository.findDistinctCategoryAi();
+    }
+
+    public List<NewsArticle> findByCategory(String category) {
+        return newsArticleRepository.findByCategoryAi(category);
+    }
+    
 }

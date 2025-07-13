@@ -44,6 +44,7 @@ public class NewsController {
     public String home(Model model, @AuthenticationPrincipal UserDetails userDetails) {
         List<NewsArticle> articles = newsArticleService.findAll();
         model.addAttribute("articles", articles);
+        model.addAttribute("categories", newsArticleService.findDistinctCategories());
 
         if (userDetails != null) {
             userRepository.findByUsername(userDetails.getUsername()).ifPresent(user -> {
@@ -60,28 +61,38 @@ public class NewsController {
         List<NewsArticle> articles = newsArticleService.searchArticles(query);
         model.addAttribute("articles", articles);
         model.addAttribute("searchQuery", query);
+        model.addAttribute("categories", newsArticleService.findDistinctCategories());
+        return "index";
+    }
+
+    @GetMapping("/category/{category}")
+    public String getArticlesByCategory(@PathVariable String category, Model model) {
+        List<NewsArticle> articles = newsArticleService.findByCategory(category);
+        model.addAttribute("articles", articles);
+        model.addAttribute("categories", newsArticleService.findDistinctCategories());
+        model.addAttribute("selectedCategory", category);
         return "index";
     }
 
     @GetMapping("/article/{id}")
-    public RedirectView viewArticle(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    public String viewArticle(@PathVariable Long id, Model model, @AuthenticationPrincipal UserDetails userDetails) {
         Optional<NewsArticle> optionalArticle = newsArticleRepository.findById(id);
 
         if (optionalArticle.isEmpty()) {
-            return new RedirectView("/");
+            return "redirect:/"; // Redirect to home if article not found
         }
 
         NewsArticle article = optionalArticle.get();
+        model.addAttribute("article", article);
+        model.addAttribute("categories", newsArticleService.findDistinctCategories()); // For header consistency
 
         if (userDetails != null) {
-            Optional<User> optionalUser = userRepository.findByUsername(userDetails.getUsername());
-            if (optionalUser.isPresent()) {
-                User user = optionalUser.get();
+            userRepository.findByUsername(userDetails.getUsername()).ifPresent(user -> {
                 BrowsingHistory history = new BrowsingHistory(user, article);
                 browsingHistoryRepository.save(history);
-            }
+            });
         }
 
-        return new RedirectView(article.getUrl());
+        return "article_detail";
     }
 }

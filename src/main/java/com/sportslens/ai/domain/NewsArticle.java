@@ -1,10 +1,15 @@
 package com.sportslens.ai.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "news_articles")
+@Getter
+@Setter
 public class NewsArticle {
 
     @Id
@@ -24,6 +29,12 @@ public class NewsArticle {
     private String rawContent;
 
     @Column(columnDefinition = "TEXT")
+    private String rawHtmlContent; // To store original article HTML
+
+    @Column(columnDefinition = "TEXT")
+    private String translatedContent; // To store translated article content
+
+    @Column(columnDefinition = "TEXT")
     private String titleCn;
 
     @Column(columnDefinition = "TEXT")
@@ -36,29 +47,18 @@ public class NewsArticle {
     private String categoryAi;
     private String sentimentAi;
 
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
-    public LocalDateTime getPublishDate() { return publishDate; }
-    public void setPublishDate(LocalDateTime publishDate) { this.publishDate = publishDate; }
-    public String getRawContent() { return rawContent; }
-    public void setRawContent(String rawContent) { this.rawContent = rawContent; }
-    public String getTitleCn() { return titleCn; }
-    public void setTitleCn(String titleCn) { this.titleCn = titleCn; }
-    public String getSummaryAi() { return summaryAi; }
-    public void setSummaryAi(String summaryAi) { this.summaryAi = summaryAi; }
-    public String getSummaryAiCn() { return summaryAiCn; }
-    public void setSummaryAiCn(String summaryAiCn) { this.summaryAiCn = summaryAiCn; }
-    public String getKeywordsAi() { return keywordsAi; }
-    public void setKeywordsAi(String keywordsAi) { this.keywordsAi = keywordsAi; }
-    public String getCategoryAi() { return categoryAi; }
-    public void setCategoryAi(String categoryAi) { this.categoryAi = categoryAi; }
-    public String getSentimentAi() { return sentimentAi; }
-    public void setSentimentAi(String sentimentAi) { this.sentimentAi = sentimentAi; }
+    // New fields for user-generated articles
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "is_user_generated")
+    private Boolean userGenerated = false;
+
+    @Column(name = "upload_time")
+    private LocalDateTime uploadTime;
+
+    // Add relationship to User (optional, for JPA convenience)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 }

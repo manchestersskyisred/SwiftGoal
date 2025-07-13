@@ -24,6 +24,10 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BrowsingHistory> browsingHistory = new ArrayList<>();
 
+    // New relationship for user articles
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<NewsArticle> articles = new ArrayList<>();
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -64,4 +68,12 @@ public class User {
     public void setBrowsingHistory(List<BrowsingHistory> browsingHistory) {
         this.browsingHistory = browsingHistory;
     }
-} 
+
+    public List<NewsArticle> getArticles() {
+        return articles;
+    }
+
+    public void setArticles(List<NewsArticle> articles) {
+        this.articles = articles;
+    }
+}

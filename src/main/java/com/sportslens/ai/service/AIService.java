@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class AIService {
@@ -23,18 +24,64 @@ public class AIService {
     @Value("${app.deepseek.api-key}")
     private String deepseekApiKey;
 
-    private final OkHttpClient httpClient = new OkHttpClient();
+    private final OkHttpClient httpClient = new OkHttpClient.Builder()
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS) // Increase timeout for longer translation tasks
+            .build();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public String translateFullArticle(String htmlContent) {
+        if (isApiKeyInvalid()) {
+            logger.warn("DeepSeek API key is not configured. Skipping full translation.");
+            return null;
+        }
+
+        // Truncate if content is excessively long to avoid hitting API limits hard
+        String truncatedHtml = htmlContent.length() > 20000 ? htmlContent.substring(0, 20000) : htmlContent;
+
+        String systemPrompt = "You are an expert translator. Your task is to translate the user-visible text content within the provided HTML from English to Chinese. You MUST preserve all HTML tags, attributes, and structure perfectly. Only translate the text nodes. Do not add any explanation or markdown formatting in your response. Return only the translated HTML content.";
+        String userPrompt = truncatedHtml;
+
+        Map<String, Object> payload = Map.of(
+                "model", "deepseek-chat",
+                "messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt)
+                ),
+                "max_tokens", 4095, // Use max available tokens for translation
+                "temperature", 0.1 // Use low temperature for more deterministic translation
+        );
+
+        String jsonPayload = serializePayload(payload);
+        if (jsonPayload == null) return null;
+
+        Request request = buildRequest(jsonPayload);
+
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                handleApiError(response);
+                return null;
+            }
+            JsonNode rootNode = objectMapper.readTree(response.body().string());
+            return rootNode.path("choices").get(0).path("message").path("content").asText();
+        } catch (IOException e) {
+            logger.error("IOException while calling DeepSeek API for translation", e);
+        } catch (Exception e) {
+            logger.error("An unexpected error occurred during translation", e);
+        }
+        return null;
+    }
+
     public AiAnalysisResult getAiAnalysisForArticle(String title, String content) {
-        if (deepseekApiKey == null || deepseekApiKey.startsWith("YOUR_") || deepseekApiKey.trim().isEmpty()) {
+        if (isApiKeyInvalid()) {
             logger.warn("DeepSeek API key is not configured. Skipping AI analysis.");
             return null;
         }
 
         String truncatedContent = content.length() > 4000 ? content.substring(0, 4000) : content;
 
-        String systemPrompt = "You are a professional sports news editor. Analyze the provided article and return a JSON object with three fields: 'translatedTitle' (Chinese translation of the title), 'chineseSummary' (a one-sentence summary in Chinese), and 'keywords' (3-5 relevant English keywords, comma-separated).";
+        String systemPrompt = "You are a professional sports news editor. Analyze the provided article and return a JSON object with four fields: 'translatedTitle' (Chinese translation of the title), 'chineseSummary' (a one-sentence summary in Chinese), 'keywords' (3-5 relevant English keywords, comma-separated), and 'partition' (classify the article into one of the following categories: NBA, 英超, 西甲, 德甲, 法甲, 意甲, 沙特联, 综合体育).";
         
         String userPrompt = String.format("Title: \"%s\"\\n\\nArticle Content: \"%s\"", title, truncatedContent);
 
@@ -48,25 +95,14 @@ public class AIService {
             "response_format", Map.of("type", "json_object")
         );
 
-        String jsonPayload;
-        try {
-            jsonPayload = objectMapper.writeValueAsString(payload);
-        } catch (JsonProcessingException e) {
-            logger.error("Failed to serialize request payload for DeepSeek API", e);
-            return null;
-        }
+        String jsonPayload = serializePayload(payload);
+        if (jsonPayload == null) return null;
 
-        RequestBody body = RequestBody.create(jsonPayload, MediaType.get("application/json; charset=utf-8"));
-        Request request = new Request.Builder()
-                .url(DEEPSEEK_API_URL)
-                .header("Authorization", "Bearer " + deepseekApiKey)
-                .post(body)
-                .build();
+        Request request = buildRequest(jsonPayload);
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                String errorBody = response.body() != null ? response.body().string() : "No response body";
-                logger.error("Failed to call DeepSeek API: {} - {}", response.code(), errorBody);
+                handleApiError(response);
                 return null;
             }
 
@@ -86,5 +122,32 @@ public class AIService {
             logger.error("An unexpected error occurred in AIService", e);
         }
         return null;
+    }
+
+    private boolean isApiKeyInvalid() {
+        return deepseekApiKey == null || deepseekApiKey.startsWith("YOUR_") || deepseekApiKey.trim().isEmpty();
+    }
+
+    private String serializePayload(Map<String, Object> payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to serialize request payload for DeepSeek API", e);
+            return null;
+        }
+    }
+
+    private Request buildRequest(String jsonPayload) {
+        RequestBody body = RequestBody.create(jsonPayload, MediaType.get("application/json; charset=utf-8"));
+        return new Request.Builder()
+                .url(DEEPSEEK_API_URL)
+                .header("Authorization", "Bearer " + deepseekApiKey)
+                .post(body)
+                .build();
+    }
+
+    private void handleApiError(Response response) throws IOException {
+        String errorBody = response.body() != null ? response.body().string() : "No response body";
+        logger.error("Failed to call DeepSeek API: {} - {}", response.code(), errorBody);
     }
 }

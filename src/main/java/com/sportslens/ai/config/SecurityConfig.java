@@ -39,6 +39,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/", "/index", "/css/**", "/js/**", "/images/**", "/register", "/login").permitAll()
+                .requestMatchers("/user/articles/**").authenticated() // Require authentication for user articles
                 .anyRequest().authenticated()
             )
             .formLogin(formLogin -> formLogin
@@ -56,4 +57,4 @@ public class SecurityConfig {
             );
         return http.build();
     }
-} 
+}

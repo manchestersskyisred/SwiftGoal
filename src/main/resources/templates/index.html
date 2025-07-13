@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SportsLens AI - 智能体育新闻</title>
+    <title>SwiftGoal - AI Sports News</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -182,42 +183,101 @@
 </head>
 <body>
 
-    <div class="user-bar">
-        <div sec:authorize="isAuthenticated()">
-            <span>欢迎, <span sec:authentication="name"></span>!</span>
-            <a href="/profile">个人主页</a>
-            <form th:action="@{/logout}" method="post" class="logout-form">
-                <button type="submit" class="logout-button">注销</button>
-            </form>
-        </div>
-        <div sec:authorize="isAnonymous()">
-            <a href="/login">登录</a>
-            <a href="/register">注册</a>
-        </div>
-    </div>
-
-    <div class="header">
-        <h1>SportsLens AI</h1>
-        <p>智能体育新闻聚合与分析平台</p>
-    </div>
-
-    <div class="search-container">
-        <form th:action="@{/search}" method="get">
-            <input type="search" name="query" placeholder="搜索新闻标题..." class="search-input" required>
-            <button type="submit" class="search-button">搜索</button>
-        </form>
-    </div>
-
+<header class="p-3 mb-3 border-bottom bg-dark text-white">
     <div class="container">
-        <div th:if="${recommendedArticles != null and not recommendedArticles.isEmpty()}">
-            <h3 class="recommendations-header">为你推荐</h3>
-            <div th:each="article : ${recommendedArticles}" class="article article-recommended">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+            <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-4">
+                <svg class="bi me-2" width="40" height="32" role="img" aria-label="Bootstrap"><use xlink:href="#bootstrap"></use></svg>
+                <span class="fs-4">SwiftGoal</span>
+            </a>
+
+            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                <li><a href="/" class="nav-link px-2 text-white">Home</a></li>
+                <li th:if="${categories != null and not #lists.isEmpty(categories)}" class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Categories
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <li th:each="cat : ${categories}"><a class="dropdown-item" th:href="@{'/category/' + ${cat}}" th:text="${cat}"></a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3" th:action="@{/search}">
+                <input type="search" name="query" class="form-control form-control-dark" placeholder="Search..." aria-label="Search" th:value="${searchQuery}">
+            </form>
+
+            <div sec:authorize="isAuthenticated()" class="dropdown text-end">
+                <a href="#" class="d-block link-light text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+                </a>
+                <div class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                    <a class="dropdown-item" th:href="@{/profile}">Profile</a>
+                    <hr class="dropdown-divider">
+                    <form th:action="@{/logout}" method="post" class="d-inline">
+                        <button type="submit" class="dropdown-item">Sign out</button>
+                    </form>
+                </div>
+            </div>
+
+            <div sec:authorize="!isAuthenticated()" class="text-end">
+                <a th:href="@{/login}" class="btn btn-outline-light me-2">Login</a>
+                <a th:href="@{/register}" class="btn btn-warning">Sign-up</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main content -->
+        <main class="col-md-12 ms-sm-auto col-lg-12 px-md-4">
+            <div class="jumbotron text-center bg-light p-5 rounded-3 mb-4">
+                <h1 class="display-4">Welcome to SwiftGoal</h1>
+                <p class="lead text-muted">Your intelligent source for sports news and analysis.</p>
+            </div>
+
+            <!-- Recommended Articles -->
+            <div sec:authorize="isAuthenticated()" th:if="${recommendedArticles != null and not #lists.isEmpty(recommendedArticles)}" class="mb-5">
+                <h3 class="recommendations-header">为你推荐</h3>
+                <div th:each="article : ${recommendedArticles}" class="article article-recommended">
+                    <h2><a th:href="@{/article/{id}(id=${article.id})}" th:text="${article.titleCn != null ? article.titleCn : article.title}" target="_blank">Article Title</a></h2>
+                    <div class="article-meta">
+                        <span class="source" th:text="${article.source} + ' (英文)'">Source</span> -
+                        <span th:text="${#temporals.format(article.publishDate, 'yyyy-MM-dd HH:mm')}">Date</span>
+                    </div>
+                     <div th:if="${article.summaryAiCn != null or article.keywordsAi != null}" class="ai-analysis">
+                        <h4>AI 智能分析</h4>
+                        <p th:if="${article.summaryAiCn != null}" class="ai-summary">
+                            <strong style="font-style: normal;">AI摘要：</strong>
+                            <span th:text="${article.summaryAiCn}">AI-generated summary...</span>
+                        </p>
+                        <div th:if="${article.keywordsAi != null}" class="ai-tags">
+                            <strong>关键词：</strong>
+                            <span class="tag" th:each="keyword : ${#strings.arraySplit(article.keywordsAi, ',')}" th:text="${#strings.trim(keyword)}">Keyword</span>
+                        </div>
+                    </div>
+                </div>
+                <hr class="section-divider"/>
+            </div>
+
+            <h3 th:if="${searchQuery}" th:text="'搜索结果: ' + ${searchQuery}" class="search-results-header"></h3>
+            <div th:if="${articles.isEmpty()}" class="empty-state">
+                <h2 th:if="${searchQuery}">找不到相关新闻</h2>
+                <p th:if="${searchQuery}">请尝试其它关键词</p>
+
+                <h2 th:unless="${searchQuery}">暂无新闻</h2>
+                <p th:unless="${searchQuery}">后台爬虫正在努力工作中... 请稍后刷新页面。</p>
+            </div>
+
+            <div th:each="article : ${articles}" class="article">
                 <h2><a th:href="@{/article/{id}(id=${article.id})}" th:text="${article.titleCn != null ? article.titleCn : article.title}" target="_blank">Article Title</a></h2>
                 <div class="article-meta">
-                    <span class="source" th:text="${article.source} + ' (英文)'">Source</span> -
+                    <span class="source" th:text="${article.source} + ' (英文)'">Source</span> - 
                     <span th:text="${#temporals.format(article.publishDate, 'yyyy-MM-dd HH:mm')}">Date</span>
                 </div>
-                 <div th:if="${article.summaryAiCn != null or article.keywordsAi != null}" class="ai-analysis">
+
+                <div th:if="${article.summaryAiCn != null or article.keywordsAi != null}" class="ai-analysis">
                     <h4>AI 智能分析</h4>
                     <p th:if="${article.summaryAiCn != null}" class="ai-summary">
                         <strong style="font-style: normal;">AI摘要：</strong>
@@ -229,38 +289,9 @@
                     </div>
                 </div>
             </div>
-            <hr class="section-divider"/>
-        </div>
-
-        <h3 th:if="${searchQuery}" th:text="'搜索结果: ' + ${searchQuery}" class="search-results-header"></h3>
-        <div th:if="${articles.isEmpty()}" class="empty-state">
-            <h2 th:if="${searchQuery}">找不到相关新闻</h2>
-            <p th:if="${searchQuery}">请尝试其它关键词</p>
-
-            <h2 th:unless="${searchQuery}">暂无新闻</h2>
-            <p th:unless="${searchQuery}">后台爬虫正在努力工作中... 请稍后刷新页面。</p>
-        </div>
-
-        <div th:each="article : ${articles}" class="article">
-            <h2><a th:href="@{/article/{id}(id=${article.id})}" th:text="${article.titleCn != null ? article.titleCn : article.title}" target="_blank">Article Title</a></h2>
-            <div class="article-meta">
-                <span class="source" th:text="${article.source} + ' (英文)'">Source</span> - 
-                <span th:text="${#temporals.format(article.publishDate, 'yyyy-MM-dd HH:mm')}">Date</span>
-            </div>
-
-            <div th:if="${article.summaryAiCn != null or article.keywordsAi != null}" class="ai-analysis">
-                <h4>AI 智能分析</h4>
-                <p th:if="${article.summaryAiCn != null}" class="ai-summary">
-                    <strong style="font-style: normal;">AI摘要：</strong>
-                    <span th:text="${article.summaryAiCn}">AI-generated summary...</span>
-                </p>
-                <div th:if="${article.keywordsAi != null}" class="ai-tags">
-                    <strong>关键词：</strong>
-                    <span class="tag" th:each="keyword : ${#strings.arraySplit(article.keywordsAi, ',')}" th:text="${#strings.trim(keyword)}">Keyword</span>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
+</div>
 
     <div class="footer">
         <p>&copy; 2025 SportsLens AI </p>
