@@ -83,6 +83,10 @@ public class CrawlerService {
 
                 try {
                     Document articleDoc = getDocumentWithRetries(absoluteUrl, espnRssUrl);
+                    if (articleDoc == null || articleDoc.body() == null || articleDoc.body().html().isEmpty()) {
+                        logger.warn("Fetched document for {} is empty, skipping article.", absoluteUrl);
+                        continue;
+                    }
                     article.setRawHtmlContent(articleDoc.body().html()); // Save raw HTML
                     String content = ArticleExtractor.INSTANCE.getText(articleDoc.html()); // Extract clean text
                     article.setRawContent(content);
@@ -91,7 +95,7 @@ public class CrawlerService {
                     if (content.length() > 50) { // Only analyze if content is substantial
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
                         // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        String translatedHtml = aiService.translateFullArticle(articleDoc);
                         if (translatedHtml != null && !translatedHtml.isBlank()) {
                             article.setTranslatedContent(translatedHtml);
                             logger.info("Full content translation successful for: {}", article.getTitle());
@@ -108,6 +112,9 @@ public class CrawlerService {
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
                         }
+                    } else {
+                        logger.warn("Content for '{}' is too short or empty, skipping AI analysis and translation.", article.getTitle());
+                        article.setTranslatedContent(null);
                     }
 
                 } catch (IOException e) {
@@ -153,6 +160,10 @@ public class CrawlerService {
 
                 try {
                     Document articleDoc = getDocumentWithRetries(absoluteUrl, tmRssUrl);
+                     if (articleDoc == null || articleDoc.body() == null || articleDoc.body().html().isEmpty()) {
+                        logger.warn("Fetched document for {} is empty, skipping article.", absoluteUrl);
+                        continue;
+                    }
                     article.setRawHtmlContent(articleDoc.body().html()); // Save raw HTML
                     String content = ArticleExtractor.INSTANCE.getText(articleDoc.html()); // Extract clean text
                     article.setRawContent(content);
@@ -161,7 +172,7 @@ public class CrawlerService {
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
                         // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        String translatedHtml = aiService.translateFullArticle(articleDoc);
                         if (translatedHtml != null && !translatedHtml.isBlank()) {
                             article.setTranslatedContent(translatedHtml);
                             logger.info("Full content translation successful for: {}", article.getTitle());
@@ -178,6 +189,9 @@ public class CrawlerService {
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
                         }
+                    } else {
+                        logger.warn("Content for '{}' is too short or empty, skipping AI analysis and translation.", article.getTitle());
+                        article.setTranslatedContent(null);
                     }
 
                 } catch (IOException e) {
@@ -223,6 +237,10 @@ public class CrawlerService {
 
                 try {
                     Document articleDoc = getDocumentWithRetries(absoluteUrl, absoluteUrl);
+                    if (articleDoc == null || articleDoc.body() == null || articleDoc.body().html().isEmpty()) {
+                        logger.warn("Fetched document for {} is empty, skipping article.", absoluteUrl);
+                        continue;
+                    }
                     article.setRawHtmlContent(articleDoc.body().html());
                     String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
                     article.setRawContent(content);
@@ -230,7 +248,7 @@ public class CrawlerService {
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
                         // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        String translatedHtml = aiService.translateFullArticle(articleDoc);
                         if (translatedHtml != null && !translatedHtml.isBlank()) {
                             article.setTranslatedContent(translatedHtml);
                             logger.info("Full content translation successful for: {}", article.getTitle());
@@ -247,6 +265,9 @@ public class CrawlerService {
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
                         }
+                    } else {
+                        logger.warn("Content for '{}' is too short or empty, skipping AI analysis and translation.", article.getTitle());
+                        article.setTranslatedContent(null);
                     }
 
                 } catch (IOException e) {
@@ -292,6 +313,10 @@ public class CrawlerService {
 
                 try {
                     Document articleDoc = getDocumentWithRetries(absoluteUrl, skyRssUrl);
+                    if (articleDoc == null || articleDoc.body() == null || articleDoc.body().html().isEmpty()) {
+                        logger.warn("Fetched document for {} is empty, skipping article.", absoluteUrl);
+                        continue;
+                    }
                     article.setRawHtmlContent(articleDoc.body().html());
                     String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
                     article.setRawContent(content);
@@ -300,7 +325,7 @@ public class CrawlerService {
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
                         // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        String translatedHtml = aiService.translateFullArticle(articleDoc);
                         if (translatedHtml != null && !translatedHtml.isBlank()) {
                             article.setTranslatedContent(translatedHtml);
                             logger.info("Full content translation successful for: {}", article.getTitle());
@@ -317,6 +342,9 @@ public class CrawlerService {
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
                         }
+                    } else {
+                        logger.warn("Content for '{}' is too short or empty, skipping AI analysis and translation.", article.getTitle());
+                        article.setTranslatedContent(null);
                     }
 
                 } catch (IOException e) {
@@ -363,6 +391,10 @@ public class CrawlerService {
 
                 try {
                     Document articleDoc = getDocumentWithRetries(absoluteUrl, foxRssUrl);
+                    if (articleDoc == null || articleDoc.body() == null || articleDoc.body().html().isEmpty()) {
+                        logger.warn("Fetched document for {} is empty, skipping article.", absoluteUrl);
+                        continue;
+                    }
                     article.setRawHtmlContent(articleDoc.body().html());
                     String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
                     article.setRawContent(content);
@@ -371,7 +403,7 @@ public class CrawlerService {
                     if (content.length() > 50) {
                         logger.info("Requesting AI analysis for article: {}", article.getTitle());
                         // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
+                        String translatedHtml = aiService.translateFullArticle(articleDoc);
                         if (translatedHtml != null && !translatedHtml.isBlank()) {
                             article.setTranslatedContent(translatedHtml);
                             logger.info("Full content translation successful for: {}", article.getTitle());
@@ -388,6 +420,9 @@ public class CrawlerService {
                         } else {
                             logger.warn("AI analysis returned null for: {}", article.getTitle());
                         }
+                    } else {
+                        logger.warn("Content for '{}' is too short or empty, skipping AI analysis and translation.", article.getTitle());
+                        article.setTranslatedContent(null);
                     }
 
                 } catch (IOException e) {
@@ -426,7 +461,10 @@ public class CrawlerService {
                 break;
             }
         }
-        throw new IOException("Failed to fetch document from " + url + " after " + retries + " retries.", lastException);
+        if (lastException != null) {
+            logger.error("Failed to fetch document from " + url + " after " + retries + " retries.", lastException);
+        }
+        return null;
     }
 
     private Document getXmlWithRetries(String url, String referer) throws IOException {

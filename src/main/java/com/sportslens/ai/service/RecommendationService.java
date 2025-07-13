@@ -4,6 +4,9 @@ import com.sportslens.ai.domain.NewsArticle;
 import com.sportslens.ai.domain.User;
 import com.sportslens.ai.repository.NewsArticleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,10 +38,17 @@ public class RecommendationService {
                 .map(history -> history.getNewsArticle().getId())
                 .collect(Collectors.toList());
 
-        List<NewsArticle> allArticles = newsArticleRepository.findAll();
+        // A non-existent ID is used to prevent errors with empty 'NOT IN' clauses.
+        if (readArticleIds.isEmpty()) {
+            readArticleIds.add(0L);
+        }
 
-        return allArticles.stream()
-                .filter(article -> !readArticleIds.contains(article.getId()))
+        // Heuristic: consider only the 200 most recent unread articles for recommendation
+        Pageable pageable = PageRequest.of(0, 200, Sort.by(Sort.Direction.DESC, "publishDate"));
+
+        List<NewsArticle> candidateArticles = newsArticleRepository.findUnreadArticlesWithKeywords(readArticleIds, pageable);
+
+        return candidateArticles.stream()
                 .filter(article -> article.getKeywordsAi() != null)
                 .sorted((a1, a2) -> {
                     long a1Matches = countKeywordMatches(a1.getKeywordsAi(), userKeywords);

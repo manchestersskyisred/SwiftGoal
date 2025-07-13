@@ -30,7 +30,74 @@
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
         }
-        .profile-info h2 {
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .avatar-container {
+            margin-right: 30px;
+            position: relative;
+        }
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .profile-details {
+            flex-grow: 1;
+        }
+        .profile-details h2 {
+            margin: 0;
+            font-size: 2em;
+            font-weight: 700;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+            color: #5f6368;
+        }
+        .stats span {
+            font-weight: 700;
+        }
+        .profile-actions form {
+            display: inline-block;
+        }
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .follow-btn {
+            background-color: #1a73e8;
+            color: #fff;
+        }
+        .unfollow-btn {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .avatar-upload-label {
+             margin-top: 10px;
+             display: block;
+             color: #1a73e8;
+             cursor: pointer;
+             font-size: 0.9em;
+        }
+        .avatar-upload-label:hover {
+            text-decoration: underline;
+        }
+        #avatar-upload-input {
+            display: none;
+        }
+        .section-title {
             color: #1a73e8;
             border-bottom: 2px solid #1a73e8;
             padding-bottom: 10px;
@@ -75,14 +142,52 @@
             padding: 40px;
             color: #5f6368;
         }
+         .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="profile-info">
-            <h2>欢迎, <span th:text="${user.username}">User</span>!</h2>
-            <h3>您的浏览记录</h3>
+        <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+
+        <div class="profile-header">
+            <div class="avatar-container">
+                <img th:src="@{${user.avatarUrl != null ? user.avatarUrl : '/images/default-avatar.png'}}" alt="User Avatar" class="avatar">
+                 <div th:if="${currentUser != null && currentUser.username == user.username}">
+                    <form th:action="@{/profile/avatar}" method="post" enctype="multipart/form-data" id="avatar-upload-form">
+                        <label for="avatar-upload-input" class="avatar-upload-label">更换头像</label>
+                        <input type="file" name="avatar" id="avatar-upload-input" onchange="document.getElementById('avatar-upload-form').submit()">
+                    </form>
+                </div>
+            </div>
+            <div class="profile-details">
+                <h2 th:text="${user.username}">User</h2>
+                <div class="stats">
+                    <div>粉丝: <span th:text="${user.followers.size()}">0</span></div>
+                    <div>关注: <span th:text="${user.following.size()}">0</span></div>
+                </div>
+                <div class="profile-actions" th:if="${currentUser != null && currentUser.username != user.username}">
+                    <form th:if="${!isFollowing}" th:action="@{/follow/{username}(username=${user.username})}" method="post">
+                        <button type="submit" class="action-btn follow-btn">关注</button>
+                    </form>
+                    <form th:if="${isFollowing}" th:action="@{/unfollow/{username}(username=${user.username})}" method="post">
+                        <button type="submit" class="action-btn unfollow-btn">取消关注</button>
+                    </form>
+                </div>
+            </div>
         </div>
+
+
+        <h3 class="section-title">浏览记录</h3>
 
         <div th:if="${history.isEmpty()}" class="empty-state">
             <p>您还没有浏览任何新闻。去<a href="/">主页</a>看看吧！</p>
@@ -97,7 +202,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="item : ${history}">
+                <tr th:each="item : ${history}" th:if="${item.newsArticle != null}">
                     <td><a th:href="@{/article/{id}(id=${item.newsArticle.id})}" th:text="${item.newsArticle.titleCn != null ? item.newsArticle.titleCn : item.newsArticle.title}" target="_blank">Article Title</a></td>
                     <td th:text="${item.newsArticle.source}">Source</td>
                     <td th:text="${#temporals.format(item.viewedAt, 'yyyy-MM-dd HH:mm:ss')}">Viewed Time</td>
