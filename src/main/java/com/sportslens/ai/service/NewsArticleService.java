@@ -17,13 +17,13 @@ public class NewsArticleService {
     @Autowired
     private NewsArticleRepository newsArticleRepository;
 
-    public List<NewsArticle> findAll() {
-        return newsArticleRepository.findAll(Sort.by(Sort.Direction.DESC, "publishDate"));
+    public Page<NewsArticle> findPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishDate"));
+        return newsArticleRepository.findAllTranslated(pageable);
     }
 
-    public Page<NewsArticle> findPaginated(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("publishDate").descending());
-        return newsArticleRepository.findAllByOrderByPublishDateDesc(pageable);
+    public List<NewsArticle> findAll() {
+        return newsArticleRepository.findPublishedArticles();
     }
 
     public List<NewsArticle> searchArticles(String query) {
@@ -34,7 +34,9 @@ public class NewsArticleService {
         return newsArticleRepository.findDistinctCategoryAi();
     }
 
-    public List<NewsArticle> findByCategory(String category) {
-        return newsArticleRepository.findByCategoryAi(category);
+    public Page<NewsArticle> findByCategoryPaginated(String category, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishDate"));
+        // Use the new unfiltered method to show all articles for a category
+        return newsArticleRepository.findAllByCategoryAi(category, pageable);
     }
 }

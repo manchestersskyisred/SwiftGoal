@@ -5,375 +5,241 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SwiftGoal - AI Sports News</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
     <style>
         body {
-            font-family: 'Roboto', 'Noto Sans SC', sans-serif;
             background-color: #f0f2f5;
-            color: #333;
-            margin: 0;
-            padding: 20px;
         }
-        .user-bar {
-            text-align: right;
-            padding: 10px 20px;
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 20px;
+        .article-card-hover {
+            transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
         }
-        .user-bar a, .user-bar span {
-            margin-left: 15px;
-            color: #1a73e8;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .user-bar .logout-form {
-            display: inline;
-        }
-        .user-bar .logout-button {
-            background: none;
-            border: none;
-            color: #1a73e8;
-            padding: 0;
-            font: inherit;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        .header h1 {
-            font-weight: 700;
-            font-size: 2.8em;
-            color: #1a73e8;
-        }
-        .header p {
-            font-weight: 300;
-            font-size: 1.2em;
-            color: #5f6368;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .article {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-            margin-bottom: 25px;
-            padding: 20px;
-            transition: box-shadow .3s ease-in-out;
-        }
-        .article:hover {
-            box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-        }
-        .article h2 {
-            margin-top: 0;
-            font-size: 1.4em;
-        }
-        .article h2 a {
-            text-decoration: none;
-            color: #1a73e8;
-        }
-        .article-meta {
-            font-size: 0.85em;
-            color: #5f6368;
-            margin-bottom: 15px;
-        }
-        .article-meta .source {
-            font-weight: 700;
-        }
-        .ai-analysis {
-            margin-top: 15px;
-            border-top: 1px solid #e8e8e8;
-            padding-top: 15px;
-        }
-        .ai-analysis h4 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #3c4043;
-            font-size: 1.1em;
-            font-weight: 700;
-        }
-        .ai-summary {
-            font-style: italic;
-            color: #4d5156;
-            line-height: 1.6;
-        }
-        .ai-tags {
-            margin-top: 10px;
-        }
-        .ai-tags strong {
-            font-style: normal;
-            font-size: 1em;
-            color: #3c4043;
-            font-weight: 700;
-            margin-right: 5px;
-        }
-        .ai-tags span.tag {
-            display: inline-block;
-            background-color: #e8f0fe;
-            color: #1967d2;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            margin-right: 8px;
-            margin-top: 5px;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 50px;
-            background-color: #fff;
-            border-radius: 8px;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            font-size: 0.9em;
-            color: #5f6368;
-        }
-        .search-container {
-            max-width: 600px;
-            margin: 0 auto 40px;
-        }
-        .search-container form {
-            display: flex;
-        }
-        .search-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 20px 0 0 20px;
-            box-sizing: border-box;
-            font-size: 1em;
-            outline: none;
-        }
-        .search-button {
-            padding: 12px 20px;
-            border: none;
-            background-color: #1a73e8;
-            color: white;
-            border-radius: 0 20px 20px 0;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 500;
-        }
-        .search-results-header {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #3c4043;
-        }
-        .recommendations-header {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #1a73e8;
-            font-size: 1.8em;
-        }
-        .article-recommended {
-            border-left: 4px solid #1a73e8;
-        }
-        .section-divider {
-            margin-top: 40px;
-            margin-bottom: 40px;
-            border: 0;
-            border-top: 1px solid #ddd;
+        .article-card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
         }
     </style>
 </head>
 <body>
 
-<header class="p-3 mb-3 border-bottom bg-dark text-white">
-    <div class="container">
+<div th:fragment="navbar" class="py-3 px-3 mb-3 border-bottom bg-white shadow-sm sticky-top">
+    <div class="container-fluid">
         <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
-            <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-4">
-                <svg class="bi me-2" width="40" height="32" role="img" aria-label="Bootstrap"><use xlink:href="#bootstrap"></use></svg>
-                <span class="fs-4">SwiftGoal</span>
+            <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-dark text-decoration-none me-4">
+                <i class="fas fa-futbol fa-2x"></i>
+                <span class="fs-4 ms-2">SwiftGoal</span>
             </a>
 
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-                <li><a href="/" class="nav-link px-2 text-white">Home</a></li>
-                <li th:if="${categories != null and not #lists.isEmpty(categories)}" class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Categories
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <li th:each="cat : ${categories}"><a class="dropdown-item" th:href="@{'/category/' + ${cat}}" th:text="${cat}"></a></li>
-                    </ul>
-                </li>
+                <!-- Navigation items can go here if needed -->
             </ul>
 
             <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3" th:action="@{/search}">
-                <input type="search" name="query" class="form-control form-control-dark" placeholder="Search..." aria-label="Search" th:value="${searchQuery}">
+                <input type="search" name="query" class="form-control" placeholder="搜索新闻..." aria-label="Search" th:value="${searchQuery}">
             </form>
 
-            <div sec:authorize="isAuthenticated()" class="dropdown text-end">
-                <a href="#" class="d-block link-light text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
-                </a>
-                <div class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
-                    <a class="dropdown-item" th:href="@{/profile}">Profile</a>
-                    <hr class="dropdown-divider">
-                    <form th:action="@{/logout}" method="post" class="d-inline">
-                        <button type="submit" class="dropdown-item">Sign out</button>
-                    </form>
-                </div>
+            <div sec:authorize="!isAuthenticated()">
+                <a th:href="@{/login}" class="btn btn-outline-primary me-2">登录</a>
+                <a th:href="@{/register}" class="btn btn-primary">注册</a>
             </div>
 
-            <div sec:authorize="!isAuthenticated()" class="text-end">
-                <a th:href="@{/login}" class="btn btn-outline-light me-2">Login</a>
-                <a th:href="@{/register}" class="btn btn-warning">Sign-up</a>
+            <div sec:authorize="isAuthenticated()" class="dropdown text-end">
+                <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img th:src="${userAvatarUrl != null ? userAvatarUrl : 'https://github.com/mdo.png'}" alt="mdo" width="40" height="40" class="rounded-circle">
+                </a>
+                <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
+                    <li><a class="dropdown-item" th:href="@{/user/articles}">我的文章</a></li>
+                    <li><a class="dropdown-item" th:href="@{/profile}">个人资料</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form th:action="@{/logout}" method="post" class="d-inline">
+                            <button type="submit" class="dropdown-item">退出登录</button>
+                        </form>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
-</header>
+</div>
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Main content -->
-        <main class="col-md-12 ms-sm-auto col-lg-12 px-md-4">
-            <div class="jumbotron text-center bg-light p-5 rounded-3 mb-4">
-                <h1 class="display-4">Welcome to SwiftGoal</h1>
-                <p class="lead text-muted">Your intelligent source for sports news and analysis.</p>
+        <div class="col-lg-2">
+            <div th:fragment="sidebar" class="d-flex flex-column flex-shrink-0 p-3 bg-light" style="height: calc(100vh - 88px); position: sticky; top: 88px;">
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a href="/" class="nav-link" th:classappend="${currentCategory == 'Home' ? 'active' : ''}" aria-current="page">
+                            <i class="fas fa-home me-2"></i> Home
+                        </a>
+                    </li>
+                </ul>
+                <hr>
+                <div class="sidebar-heading px-3 mt-2 mb-1 text-muted">Categories</div>
+                <ul class="nav nav-pills flex-column">
+                    <li sec:authorize="isAuthenticated()">
+                        <a th:href="@{/recommendations}" class="nav-link link-dark" th:classappend="${currentCategory == '为你推荐' ? 'active' : ''}">
+                            <i class="fas fa-star me-2"></i> 为你推荐
+                        </a>
+                    </li>
+                    <li th:each="cat : ${categories}">
+                        <a th:href="@{'/category/' + ${cat}}" class="nav-link link-dark" th:classappend="${currentCategory == cat ? 'active' : ''}">
+                            <i class="fas fa-futbol me-2"></i> <span th:text="${cat}"></span>
+                        </a>
+                    </li>
+                </ul>
+                <hr class="mt-auto">
+                <div sec:authorize="isAuthenticated()">
+                    <a th:href="@{/user/articles/create}" class="btn btn-primary w-100">
+                        <i class="fas fa-pen-to-square me-2"></i> 用户投稿
+                    </a>
+                </div>
             </div>
+        </div>
 
-            <!-- News Container -->
-            <div id="news-container">
-                <!-- Recommended Articles -->
-                <div sec:authorize="isAuthenticated()" th:if="${recommendedArticles != null and not #lists.isEmpty(recommendedArticles)}" class="mb-5">
-                    <h3 class="recommendations-header">为你推荐</h3>
-                    <div th:each="article : ${recommendedArticles}" class="article article-recommended">
-                        <h2><a th:href="@{/article/{id}(id=${article.id})}" th:text="${article.titleCn != null ? article.titleCn : article.title}" target="_blank">Article Title</a></h2>
-                        <div class="article-meta">
-                            <span class="source" th:text="${article.source} + ' (英文)'">Source</span> -
-                            <span th:text="${#temporals.format(article.publishDate, 'yyyy-MM-dd HH:mm')}">Date</span>
-                        </div>
-                         <div th:if="${article.summaryAiCn != null or article.keywordsAi != null}" class="ai-analysis">
-                            <h4>AI 智能分析</h4>
-                            <p th:if="${article.summaryAiCn != null}" class="ai-summary">
-                                <strong style="font-style: normal;">AI摘要：</strong>
-                                <span th:text="${article.summaryAiCn}">AI-generated summary...</span>
-                            </p>
-                            <div th:if="${article.keywordsAi != null}" class="ai-tags">
-                                <strong>关键词：</strong>
-                                <span class="tag" th:each="keyword : ${#strings.arraySplit(article.keywordsAi, ',')}" th:text="${#strings.trim(keyword)}">Keyword</span>
-                            </div>
+        <div class="col-lg-10">
+            <main class="container py-4">
+                <h2 th:if="${searchQuery}">Search Results for: <span class="text-primary" th:text="${searchQuery}"></span></h2>
+                <h2 th:if="${currentCategory}">Category: <span class="text-primary" th:text="${currentCategory}"></span></h2>
+
+                <div id="articles-container" class="row">
+                    <!-- Articles will be loaded here by Thymeleaf and JS -->
+                    <div th:each="article : ${articlesPage.content}" class="col-lg-12 mb-4">
+                        <div class="card h-100 shadow-sm article-card-hover">
+                             <div class="card-body">
+                                 <h5 class="card-title" th:text="${article.titleCn != null ? article.titleCn : article.title}">Article Title</h5>
+                                 <h6 class="card-subtitle mb-2 text-muted" th:text="${article.source} + ' - ' + ${#temporals.format(article.publishDate, 'MMM dd, yyyy HH:mm')}">Source and Date</h6>
+                                 <p class="card-text" th:text="${article.summaryAiCn != null ? article.summaryAiCn : article.summaryAi}"></p>
+                             </div>
+                             <div class="card-footer bg-transparent border-0">
+                                  <a th:href="@{/article/{id}(id=${article.id})}" class="btn btn-primary btn-sm">阅读更多</a>
+                             </div>
                         </div>
                     </div>
                 </div>
-
-                <hr sec:authorize="isAuthenticated()" th:if="${recommendedArticles != null and not #lists.isEmpty(recommendedArticles)}" class="section-divider">
-
-                <!-- Main Article List -->
-                <div th:each="article : ${articles}" class="article">
-                    <h2><a th:href="@{/article/{id}(id=${article.id})}" th:text="${article.titleCn != null ? article.titleCn : article.title}" target="_blank">Article Title</a></h2>
-                    <div class="article-meta">
-                        <span class="source" th:text="${article.source} + ' (英文)'">Source</span> -
-                        <span th:text="${#temporals.format(article.publishDate, 'yyyy-MM-dd HH:mm')}">Date</span>
-                    </div>
-                    <div th:if="${article.summaryAiCn != null or article.keywordsAi != null}" class="ai-analysis">
-                        <h4>AI 智能分析</h4>
-                        <p th:if="${article.summaryAiCn != null}" class="ai-summary">
-                            <strong style="font-style: normal;">AI摘要：</strong>
-                            <span th:text="${article.summaryAiCn}">AI-generated summary...</span>
-                        </p>
-                        <div th:if="${article.keywordsAi != null}" class="ai-tags">
-                            <strong>关键词：</strong>
-                            <span class="tag" th:each="keyword : ${#strings.arraySplit(article.keywordsAi, ',')}" th:text="${#strings.trim(keyword)}">Keyword</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Loading Indicator -->
-            <div id="loading" style="display: none; text-align: center; padding: 20px;">
-                <p>正在加载更多新闻...</p>
-            </div>
-
-        </main>
+            </main>
+        </div>
     </div>
 </div>
-
-<footer class="footer mt-auto py-3 bg-light">
-    <div class="footer">
-        <p>&copy; 2025 SportsLens AI </p>
-    </div>
-</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
     /*<![CDATA[*/
-    let currentPage = /*[[${currentPage}]]*/ 0;
-    const totalPages = /*[[${totalPages}]]*/ 1;
+    let currentPage = 1;
+    let totalPages = [[${articlesPage.totalPages}]];
     let isLoading = false;
+    const articlesContainer = document.getElementById('articles-container');
+    const currentCategory = /*[[${currentCategory}]]*/ 'Home'; // Pass thymeleaf variable to JS
 
-    const newsContainer = document.getElementById('news-container');
-    const loadingIndicator = document.getElementById('loading');
+    window.addEventListener('scroll', () => {
+        if (isLoading || currentPage >= totalPages) return;
 
-    function formatDate(dateString) {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) + ' ' +
-               date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    }
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+            loadMoreArticles();
+        }
+    });
 
     async function loadMoreArticles() {
-        if (isLoading || currentPage >= totalPages - 1) {
-            return;
+        isLoading = true;
+        showLoadingSpinner();
+
+        // Determine the correct API endpoint
+        let apiUrl = '';
+        if (currentCategory === 'Home') {
+            apiUrl = `/api/news?page=${currentPage}&size=100`;
+        } else if (currentCategory === '为你推荐') {
+            apiUrl = `/api/news/recommendations?page=${currentPage}&size=100`;
+        } else {
+            apiUrl = `/api/news/category/${currentCategory}?page=${currentPage}&size=100`;
         }
 
-        isLoading = true;
-        loadingIndicator.style.display = 'block';
-        currentPage++;
-
         try {
-            const response = await fetch(`/api/news?page=${currentPage}&size=50`);
+            const response = await fetch(apiUrl);
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             const page = await response.json();
             const articles = page.content;
 
-            articles.forEach(article => {
-                const articleEl = document.createElement('div');
-                articleEl.classList.add('article');
+            if (articles.length > 0) {
+                articles.forEach(article => {
+                    const articleElement = createArticleCard(article);
+                    articlesContainer.appendChild(articleElement);
+                });
+                currentPage++;
+            }
 
-                let title = article.titleCn ? article.titleCn : article.title;
-                let source = article.source ? article.source + ' (英文)' : '';
-                let publishedAt = formatDate(article.publishDate);
-                let summary = article.summaryAiCn ? `<p class="ai-summary">${article.summaryAiCn}</p>` : '';
-                let keywords = '';
-                if (article.keywordsAi) {
-                    keywords = `<div class="ai-tags"><strong>AI 标签:</strong> ${article.keywordsAi.split(',').map(k => `<span class="tag">${k}</span>`).join(' ')}</div>`;
-                }
-                let aiAnalysis = (summary || keywords) ? `<div class="ai-analysis"><h4>AI 智能分析</h4>${summary}${keywords}</div>` : '';
-
-                articleEl.innerHTML = `
-                    <h2><a href="/article/${article.id}" target="_blank">${title}</a></h2>
-                    <div class="article-meta">
-                        <span class="source">${source}</span> -
-                        <span>${publishedAt}</span>
-                    </div>
-                    ${aiAnalysis}
-                `;
-                newsContainer.appendChild(articleEl);
-            });
+            if (currentPage >= page.totalPages) {
+                showEndOfResults();
+                totalPages = currentPage; // Prevent further loading
+            }
         } catch (error) {
-            console.error('Failed to fetch articles:', error);
-            currentPage--; // Rollback page number on error
+            console.error("Could not load more articles:", error);
+            // Optionally show an error message to the user
         } finally {
             isLoading = false;
-            loadingIndicator.style.display = 'none';
+            hideLoadingSpinner();
         }
     }
 
-    window.addEventListener('scroll', () => {
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        if (clientHeight + scrollTop >= scrollHeight - 100) { // 100px buffer
-            loadMoreArticles();
+    function showLoadingSpinner() {
+        let spinner = document.getElementById('loading-spinner');
+        if (!spinner) {
+            spinner = document.createElement('div');
+            spinner.id = 'loading-spinner';
+            spinner.className = 'text-center py-4';
+            spinner.innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>`;
+            articlesContainer.parentNode.appendChild(spinner);
         }
-    });
-    /*]]>*/
+        spinner.style.display = 'block';
+    }
+
+    function hideLoadingSpinner() {
+        const spinner = document.getElementById('loading-spinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+
+    function showEndOfResults() {
+         let endMessage = document.getElementById('end-of-results');
+         if(!endMessage) {
+             endMessage = document.createElement('div');
+             endMessage.id = 'end-of-results';
+             endMessage.className = 'text-center text-muted py-4';
+             endMessage.textContent = 'You have reached the end of the list.';
+             articlesContainer.parentNode.appendChild(endMessage);
+         }
+    }
+
+    function createArticleCard(article) {
+        const articleCol = document.createElement('div');
+        articleCol.className = 'col-lg-12 mb-4';
+
+        const formattedDate = new Date(article.publishDate).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const title = article.titleCn || article.title;
+        const summary = article.summaryAiCn || article.summaryAi || 'No summary available.';
+        const source = article.source || 'Unknown Source';
+
+        articleCol.innerHTML = `
+            <div class="card h-100 shadow-sm article-card-hover">
+                <div class="card-body">
+                    <h5 class="card-title">${title}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">${source} - ${formattedDate}</h6>
+                    <p class="card-text">${summary}</p>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                     <a href="/article/${article.id}" class="btn btn-primary btn-sm">阅读更多</a>
+                </div>
+            </div>
+        `;
+        return articleCol;
+    }
 </script>
 </body>
 </html>

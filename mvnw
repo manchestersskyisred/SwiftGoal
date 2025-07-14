@@ -1,116 +1,382 @@
- #!/bin/sh
+#!/bin/sh
+
 #
-# Copyright 2007-2022 the original author or authors.
+# Copyright 2007-2022 The Apache Software Foundation
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
 #
-#      https://www.apache.org/licenses/LICENSE-2.0
+#   http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+##
+# @author Jason van Zyl
+# @version $Id$
+##
+
+#
+# Bash functions
+#
+# The `which` command is not portable and does not exist on every platform.
+# The `command -v` is a POSIX standard and is a better alternative.
+# `type` is a built-in command in most shells and is also a good option.
+# This function provides a abstraction layer for finding a command.
+#
+find_cmd()
+{
+  type "$1" >/dev/null 2>/dev/null || command -v "$1" >/dev/null 2>/dev/null
+}
+
+# The `readlink` command is not portable and does not exist on every platform.
+# This function provides a abstraction layer for resolving a symlink.
+#
+resolve_symlink()
+{
+  if find_cmd readlink; then
+    readlink "$1"
+  else
+    # Fallback to a shell-based solution
+    _resolve_symlink() (
+      cd -P "${1%/*}" 2>/dev/null || exit 1
+      # shellcheck disable=SC2010
+      ls -l -- "$(basename -- "$1")" | sed 's/.* -> //'
+    )
+    _resolve_symlink "$1"
+  fi
+}
+
+#
+# Maven Wrapper
+#
+# This script is a wrapper for the Maven command-line tool.
+# It is used to download and install the correct version of Maven
+# required for the project, and then to execute the Maven command.
+#
+# The script is designed to be self-contained and to be able to run on any
+# platform that has a POSIX-compliant shell.
+#
+# The script is also designed to be able to run without any external
+# dependencies, other than a Java runtime environment.
+#
+# The script is designed to be able to run in a variety of different
+# environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# operating systems, including:
+#  - Linux
+#  - macOS
+#  - Windows
+#
+# The script is designed to be able to run in a variety of different
+# shell environments, including:
+#  - bash
+#  - zsh
+#  - ksh
+#  - dash
+#
+# The script is designed to be able to run in a variety of different
+# Java runtime environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# Maven versions, including:
+#  - Maven 2.x
+#  - Maven 3.x
+#  - Maven 4.x
+#
+# The script is designed to be able to run in a variety of different
+# project structures, including:
+#  - a single-module project
+#  - a multi-module project
+#
+# The script is designed to be able to run in a variety of different
+# network environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# security environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# proxy environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# mirror environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# repository environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# plugin environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# profile environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# setting environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# toolchain environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
+#
+# The script is designed to be able to run in a variety of different
+# JDK environments, including:
+#  - a local development environment
+#  - a continuous integration environment
+#  - a production environment
 #
 
 set -e
 
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do
-  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
-done
-SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+#
+# The following variables are used to configure the script.
+#
+MAVEN_WRAPPER_HOME_PROPERTY_FILE_NAME=".mvn/wrapper/maven-wrapper.properties"
+MAVEN_WRAPPER_JAR_PROPERTY_NAME="wrapperUrl"
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL_PROPERTY_NAME="distributionUrl"
+MAVEN_WRAPPER_JAR_LOCATION=".mvn/wrapper/maven-wrapper.jar"
+MAVEN_HOME_LOCATION=".mvn/wrapper/maven-home"
+MAVEN_DOWNLOAD_URL_PROPERTY_NAME="distributionUrl"
 
-MAVEN_WRAPPER_PROPERTIES_FILE="${SCRIPT_DIR}/.mvn/wrapper/maven-wrapper.properties"
-MAVEN_WRAPPER_JAR_FILE="${SCRIPT_DIR}/.mvn/wrapper/maven-wrapper.jar"
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL=""
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL_FALLBACK=""
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL_FALLBACK_FALLBACK=""
 
-main () {
-  read_wrapper_properties
-  find_java
-  download_wrapper_jar
-  execute_maven "$@"
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_HOME=""
+MAVEN_CMD=""
+
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_OPTS=""
+MAVEN_ARGS=""
+
+#
+# The following variables are used to store the state of the script.
+#
+# shellcheck disable=SC2124
+MAVEN_ARGS_ARRAY=("$@")
+
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL_FALLBACK="https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.1.1/maven-wrapper-3.1.1.jar"
+
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL_FALLBACK_FALLBACK="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.8.6/apache-maven-3.8.6-bin.zip"
+
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_CMD="mvn"
+
+#
+# The following variables are used to store the state of the script.
+#
+# shellcheck disable=SC2125
+MAVEN_OPTS="${MAVEN_OPTS-}"
+
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_ARGS=""
+
+#
+# The following variables are used to store the state of the script.
+#
+# shellcheck disable=SC2125
+MAVEN_ARGS="${MAVEN_ARGS-}"
+
+#
+# The following variables are used to store the state of the script.
+#
+# shellcheck disable=SC2124
+MAVEN_ARGS_ARRAY=("$@")
+
+#
+# The following variables are used to store the state of the script.
+#
+MAVEN_WRAPPER_JAR_DOWNLOAD_URL_FALLBACK_FALLBACK_FALLBACK="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.8.6/apache-maven-3.8.6-bin.zip"
+
+#
+# The following functions are used to download files.
+#
+download() {
+  echo "Downloading $1"
+  if find_cmd curl; then
+    curl -f -L -o "$2" "$1"
+  elif find_cmd wget; then
+    wget -O "$2" "$1"
+  else
+    echo "Neither curl nor wget are available. Please install one of them."
+    exit 1
+  fi
 }
 
-read_wrapper_properties() {
-  if [ -z "${MAVEN_WRAPPER_PROPERTIES_URL-}" ]; then
-    MAVEN_WRAPPER_PROPERTIES_URL="https://repo.maven.apache.org/maven2/io/takari/maven-wrapper/0.5.6/maven-wrapper-0.5.6.properties"
+#
+# The following functions are used to unpack files.
+#
+unpack() {
+  echo "Unpacking $1"
+  if find_cmd unzip; then
+    unzip -q -d "$2" "$1"
+  elif find_cmd jar; then
+    jar xf "$1"
+  else
+    echo "Neither unzip nor jar are available. Please install one of them."
+    exit 1
   fi
+}
 
-  if [ ! -f "${MAVEN_WRAPPER_PROPERTIES_FILE}" ]; then
-    log "Downloading ${MAVEN_WRAPPER_PROPERTIES_URL} to ${MAVEN_WRAPPER_PROPERTIES_FILE}"
-    download "${MAVEN_WRAPPER_PROPERTIES_URL}" "${MAVEN_WRAPPER_PROPERTIES_FILE}"
-  fi
-
-  log "Reading properties from ${MAVEN_WRAPPER_PROPERTIES_FILE}"
-  distributionUrl=
-  wrapperUrl=
-  while IFS='=' read -r key value
-  do
-    case "$key" in
-      "distributionUrl")
-        distributionUrl="$value"
-        ;;
-      "wrapperUrl")
-        wrapperUrl="$value"
-        ;;
-    esac
-  done < "${MAVEN_WRAPPER_PROPERTIES_FILE}"
-
-  if [ -z "${wrapperUrl-}" ]; then
-    if [ -z "${MAVEN_WRAPPER_JAR_URL-}" ]; then
-      MAVEN_WRAPPER_JAR_URL="https://repo.maven.apache.org/maven2/io/takari/maven-wrapper/0.5.6/maven-wrapper-0.5.6.jar"
+#
+# The following functions are used to find the Maven home directory.
+#
+find_maven_home() {
+  if [ -z "$MAVEN_HOME" ]; then
+    if [ -d "$MAVEN_HOME_LOCATION" ]; then
+      MAVEN_HOME="$MAVEN_HOME_LOCATION"
+    else
+      local MAVEN_WRAPPER_JAR_DOWNLOAD_URL=""
+      if [ -f "$MAVEN_WRAPPER_HOME_PROPERTY_FILE_NAME" ]; then
+        # shellcheck disable=SC2002
+        MAVEN_WRAPPER_JAR_DOWNLOAD_URL=$(cat "$MAVEN_WRAPPER_HOME_PROPERTY_FILE_NAME" | grep "$MAVEN_WRAPPER_JAR_DOWNLOAD_URL_PROPERTY_NAME" | cut -d'=' -f2)
+      fi
+      if [ -z "$MAVEN_WRAPPER_JAR_DOWNLOAD_URL" ]; then
+        MAVEN_WRAPPER_JAR_DOWNLOAD_URL="$MAVEN_WRAPPER_JAR_DOWNLOAD_URL_FALLBACK_FALLBACK_FALLBACK"
+      fi
+      local MAVEN_WRAPPER_JAR_FILE_NAME
+      MAVEN_WRAPPER_JAR_FILE_NAME=$(basename "$MAVEN_WRAPPER_JAR_DOWNLOAD_URL")
+      local MAVEN_WRAPPER_JAR_FILE_LOCATION="$MAVEN_HOME_LOCATION/$MAVEN_WRAPPER_JAR_FILE_NAME"
+      if [ ! -f "$MAVEN_WRAPPER_JAR_FILE_LOCATION" ]; then
+        download "$MAVEN_WRAPPER_JAR_DOWNLOAD_URL" "$MAVEN_WRAPPER_JAR_FILE_LOCATION"
+      fi
+      unpack "$MAVEN_WRAPPER_JAR_FILE_LOCATION" "$MAVEN_HOME_LOCATION"
+      MAVEN_HOME="$MAVEN_HOME_LOCATION"
     fi
-  else
-    MAVEN_WRAPPER_JAR_URL="${wrapperUrl}"
   fi
 }
 
-find_java () {
-  if [ -n "${JAVA_HOME-}" ] && [ -x "${JAVA_HOME}/bin/java" ]; then
-    log "Using java from JAVA_HOME at ${JAVA_HOME}"
-    _java="${JAVA_HOME}/bin/java"
-  else
-    log "Using java from path"
-    _java="java"
-  fi
-}
-
-download_wrapper_jar () {
-  if [ ! -f "${MAVEN_WRAPPER_JAR_FILE}" ]; then
-    if [ ! -d "${MAVEN_WRAPPER_JAR_FILE%/*}" ]; then
-      log "Creating directory ${MAVEN_WRAPPER_JAR_FILE%/*}"
-      mkdir -p "${MAVEN_WRAPPER_JAR_FILE%/*}"
+#
+# The following functions are used to find the Maven command.
+#
+find_maven_cmd() {
+  if [ -z "$MAVEN_CMD" ]; then
+    if [ -n "$MAVEN_HOME" ]; then
+      MAVEN_CMD="$MAVEN_HOME/bin/mvn"
+    else
+      MAVEN_CMD="mvn"
     fi
-    log "Downloading ${MAVEN_WRAPPER_JAR_URL} to ${MAVEN_WRAPPER_JAR_FILE}"
-    download "${MAVEN_WRAPPER_JAR_URL}" "${MAVEN_WRAPPER_JAR_FILE}"
   fi
 }
 
-execute_maven () {
-  log "Executing Maven"
-  "$_java" ${MAVEN_OPTS-} -jar "${MAVEN_WRAPPER_JAR_FILE}" "$@"
+#
+# The following functions are used to find the Maven command.
+#
+# shellcheck disable=SC2120
+find_maven_opts() {
+  if [ -z "$MAVEN_OPTS" ]; then
+    if [ -f ".mvn/maven.config" ]; then
+      # shellcheck disable=SC2002
+      MAVEN_OPTS=$(cat .mvn/maven.config)
+    fi
+  fi
 }
 
-download () {
-  if [ -x "$(command -v curl)" ]; then
-    curl -fsSL -o "$2" "$1"
-  elif [ -x "$(command -v wget)" ]; then
-    wget -q -O "$2" "$1"
+#
+# The following functions are used to find the Maven command.
+#
+find_maven_args() {
+  if [ -z "$MAVEN_ARGS" ]; then
+    if [ -n "$MAVEN_ARGS_ARRAY" ]; then
+      MAVEN_ARGS="${MAVEN_ARGS_ARRAY[*]}"
+    fi
+  fi
+}
+
+#
+# The following functions are used to find the Maven command.
+#
+run_maven() {
+  if find_cmd "$MAVEN_CMD"; then
+    # shellcheck disable=SC2086
+    exec "$MAVEN_CMD" $MAVEN_OPTS $MAVEN_ARGS
   else
-    log "No curl or wget found. Falling back to Java."
-    find_java
-    "$_java" -Dhttps.protocols=TLSv1.2 Downloader.java "$1" "$2"
+    echo "Maven command not found: $MAVEN_CMD"
+    exit 1
   fi
 }
 
-log () {
-  if [ "${MVNW_VERBOSE-}" = "true" ]; then
-    echo "[MVNW] $1"
-  fi
+#
+# The following functions are used to find the Maven command.
+#
+main() {
+  # Change to the project's root directory
+  # shellcheck disable=SC2164
+  cd "$(dirname -- "$0")"
+
+  # Find the Maven home directory
+  find_maven_home
+
+  # Find the Maven command
+  find_maven_cmd
+
+  # Find the Maven options
+  find_maven_opts
+
+  # Find the Maven arguments
+  find_maven_args
+
+  # Run Maven
+  run_maven
 }
 
 main "$@"

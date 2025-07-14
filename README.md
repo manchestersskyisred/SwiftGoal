@@ -1,4 +1,4 @@
-# SwiftGoal (Formerly JAVA FINAL)
+# SwiftGoal 
 
 This is the final project for my sophomore year Java programming fundamentals course. It is an intelligent sports news aggregation and analysis platform.
 
