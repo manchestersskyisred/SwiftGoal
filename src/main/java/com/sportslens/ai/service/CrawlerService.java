@@ -14,8 +14,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
+import org.springframework.beans.factory.annotation.Value;
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.XMLReaderFactory;
+import de.l3s.boilerpipe.sax.BoilerpipeSAXInput;
+import de.l3s.boilerpipe.sax.HTMLHighlighter;
+import de.l3s.boilerpipe.document.TextDocument;
 import java.io.IOException;
+import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -40,366 +47,128 @@ public class CrawlerService {
     @Autowired
     private AIService aiService;
 
-    // Run 10 seconds after startup, then every hour
-    @Scheduled(initialDelay = 10000, fixedRate = 3600000)
+    @Autowired
+    private HtmlTranslator htmlTranslator;
+
+    @Value("${app.crawler.rss-feeds}")
+    private List<String> rssFeeds;
+
+    // Run 10 seconds after startup, then every 15 minutes
+    @Scheduled(initialDelay = 10000, fixedRate = 900000)
     public void crawlAndSaveArticles() {
         logger.info("Starting scheduled crawl...");
-        crawlEspnNews();
-        crawlTransfermarktNews();
-        crawlNbcSportsNews();
-        crawlSkySportsNews();
-        crawlFoxSportsNews();
+        // This is a consolidated list. The specific crawl methods below will be removed.
+        for (String feedUrl : rssFeeds) {
+            crawlRssFeed(feedUrl);
+        }
         logger.info("Scheduled crawl finished.");
     }
 
-    public void crawlEspnNews() {
-        String espnRssUrl = "https://espn.com/espn/rss/news";
-        logger.info("Crawling ESPN sports news from RSS feed: {}", espnRssUrl);
+    private void crawlRssFeed(String rssUrl) {
+        String sourceName = extractSourceFromUrl(rssUrl);
+        logger.info("Crawling {} from RSS feed: {}", sourceName, rssUrl);
         try {
-            Document doc = getXmlWithRetries(espnRssUrl, espnRssUrl);
+            Document doc = getXmlWithRetries(rssUrl, rssUrl);
             Elements items = doc.select("item");
-            logger.info("ESPN RSS: Found {} items.", items.size());
+            logger.info("{} RSS: Found {} items.", sourceName, items.size());
             if (items.isEmpty()) {
-                logger.warn("ESPN RSS: No items found in feed. Feed might be empty or structure changed. XML dump:");
-                logger.warn(doc.html());
+                logger.warn("{} RSS: No items found. Feed structure might have changed.", sourceName);
+                return;
             }
 
             for (Element item : items) {
                 String title = item.select("title").text();
-                String absoluteUrl = item.select("link").text();
-                
-                if (absoluteUrl.isEmpty() || newsArticleRepository.findByUrl(absoluteUrl).isPresent()) {
+                String link = item.select("link").text();
+
+                if (link.isEmpty() || newsArticleRepository.findByUrl(link).isPresent()) {
                     continue;
                 }
-                
                 if (title.isEmpty()) continue;
-                logger.debug("ESPN RSS: Processing new article '{}' at URL {}", title, absoluteUrl);
 
-                NewsArticle article = new NewsArticle();
-                article.setTitle(title);
-                article.setUrl(absoluteUrl);
-                article.setSource("ESPN");
-                article.setPublishDate(LocalDateTime.now());
+                logger.debug("{} RSS: Processing new article '{}'", sourceName, title);
 
                 try {
-                    Document articleDoc = getDocumentWithRetries(absoluteUrl, espnRssUrl);
-                    article.setRawHtmlContent(articleDoc.body().html()); // Save raw HTML
-                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html()); // Extract clean text
-                    article.setRawContent(content);
-
-                    // AI Analysis
-                    if (content.length() > 50) { // Only analyze if content is substantial
-                        logger.info("Requesting AI analysis for article: {}", article.getTitle());
-                        // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
-                        if (translatedHtml != null && !translatedHtml.isBlank()) {
-                            article.setTranslatedContent(translatedHtml);
-                            logger.info("Full content translation successful for: {}", article.getTitle());
-                        }
-
-                        // 2. Summary, keywords, and category analysis
-                        AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
-                        if (analysisResult != null) {
-                            article.setTitleCn(analysisResult.getTranslatedTitle());
-                            article.setSummaryAiCn(analysisResult.getChineseSummary());
-                            article.setKeywordsAi(analysisResult.getKeywords());
-                            article.setCategoryAi(analysisResult.getPartition());
-                            logger.info("AI analysis successful for: {}", article.getTitle());
-                        } else {
-                            logger.warn("AI analysis returned null for: {}", article.getTitle());
-                        }
+                    Document articleDoc = getDocumentWithRetries(link, rssUrl);
+                    if (articleDoc == null) {
+                        logger.warn("Fetched document for {} is null, skipping.", link);
+                        continue;
                     }
 
-                } catch (IOException e) {
-                    logger.error("Could not fetch full content for {}: {}", title, e.getMessage());
-                }
-
-                newsArticleRepository.save(article);
-                logger.info("Saved new ESPN article: {}", title);
-            }
-        } catch (Exception e) {
-            logger.error("Error crawling ESPN news from RSS feed: {}", e.getMessage(), e);
-        }
-    }
-
-    public void crawlTransfermarktNews() {
-        String tmRssUrl = "https://www.transfermarkt.co.uk/rss/news";
-        logger.info("Crawling Transfermarkt news from RSS feed: {}", tmRssUrl);
-        try {
-            Document doc = getXmlWithRetries(tmRssUrl, tmRssUrl);
-            Elements items = doc.select("item");
-            logger.info("Transfermarkt RSS: Found {} items.", items.size());
-            if (items.isEmpty()) {
-                logger.warn("Transfermarkt RSS: No items found in feed. Feed might be empty or structure changed. XML dump:");
-                logger.warn(doc.html());
-            }
-
-            for (Element item : items) {
-                String title = item.select("title").text();
-                String absoluteUrl = item.select("link").text();
-                
-                if (absoluteUrl.isEmpty() || newsArticleRepository.findByUrl(absoluteUrl).isPresent()) {
-                    continue;
-                }
-                
-                if (title.isEmpty()) continue;
-                logger.debug("Transfermarkt RSS: Processing new article '{}' at URL {}", title, absoluteUrl);
-
-                NewsArticle article = new NewsArticle();
-                article.setTitle(title);
-                article.setUrl(absoluteUrl);
-                article.setSource("Transfermarkt");
-                article.setPublishDate(LocalDateTime.now());
-
-                try {
-                    Document articleDoc = getDocumentWithRetries(absoluteUrl, tmRssUrl);
-                    article.setRawHtmlContent(articleDoc.body().html()); // Save raw HTML
-                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html()); // Extract clean text
-                    article.setRawContent(content);
+                    NewsArticle article = new NewsArticle();
+                    article.setTitle(title);
+                    article.setUrl(link);
+                    article.setSource(sourceName);
+                    article.setPublishDate(LocalDateTime.now());
                     
-                    // AI Analysis
-                    if (content.length() > 50) {
-                        logger.info("Requesting AI analysis for article: {}", article.getTitle());
-                        // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
-                        if (translatedHtml != null && !translatedHtml.isBlank()) {
-                            article.setTranslatedContent(translatedHtml);
-                            logger.info("Full content translation successful for: {}", article.getTitle());
-                        }
+                    analyzeAndSaveArticle(article, articleDoc);
 
-                        // 2. Summary, keywords, and category analysis
-                        AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
-                        if (analysisResult != null) {
-                            article.setTitleCn(analysisResult.getTranslatedTitle());
-                            article.setSummaryAiCn(analysisResult.getChineseSummary());
-                            article.setKeywordsAi(analysisResult.getKeywords());
-                            article.setCategoryAi(analysisResult.getPartition());
-                            logger.info("AI analysis successful for: {}", article.getTitle());
-                        } else {
-                            logger.warn("AI analysis returned null for: {}", article.getTitle());
-                        }
-                    }
-
-                } catch (IOException e) {
-                    logger.error("Could not fetch full content for {}: {}", title, e.getMessage());
+                } catch (Exception e) {
+                    logger.error("Failed to process article from link {}: {}", link, e.getMessage(), e);
                 }
-                
-                newsArticleRepository.save(article);
-                logger.info("Saved new Transfermarkt article: {}", title);
             }
         } catch (Exception e) {
-            logger.error("Error crawling Transfermarkt news from RSS feed: {}", e.getMessage(), e);
+            logger.error("Error crawling {} RSS feed: {}", sourceName, e.getMessage(), e);
         }
     }
 
-    public void crawlNbcSportsNews() {
-        String nbcRssUrl = "https://www.sportsengine.com/soccer-rss-feed";
-        logger.info("Crawling NBC Sports news from RSS feed: {}", nbcRssUrl);
-        try {
-            Document doc = getXmlWithRetries(nbcRssUrl, nbcRssUrl);
-            Elements items = doc.select("item");
-            logger.info("NBC Sports RSS: Found {} items.", items.size());
-            if (items.isEmpty()) {
-                logger.warn("NBC Sports RSS: No items found in feed. Feed might be empty or structure changed. XML dump:");
-                logger.warn(doc.html());
-            }
-
-            for (Element item : items) {
-                String title = item.select("title").text();
-                String absoluteUrl = item.select("link").text();
-
-                if (absoluteUrl.isEmpty() || newsArticleRepository.findByUrl(absoluteUrl).isPresent()) {
-                    continue;
-                }
-
-                if (title.isEmpty()) continue;
-                logger.debug("NBC Sports RSS: Processing new article '{}' at URL {}", title, absoluteUrl);
-
-                NewsArticle article = new NewsArticle();
-                article.setTitle(title);
-                article.setUrl(absoluteUrl);
-                article.setSource("NBC Sports");
-                article.setPublishDate(LocalDateTime.now());
-
-                try {
-                    Document articleDoc = getDocumentWithRetries(absoluteUrl, absoluteUrl);
-                    article.setRawHtmlContent(articleDoc.body().html());
-                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
-                    article.setRawContent(content);
-
-                    if (content.length() > 50) {
-                        logger.info("Requesting AI analysis for article: {}", article.getTitle());
-                        // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
-                        if (translatedHtml != null && !translatedHtml.isBlank()) {
-                            article.setTranslatedContent(translatedHtml);
-                            logger.info("Full content translation successful for: {}", article.getTitle());
-                        }
-
-                        // 2. Summary, keywords, and category analysis
-                        AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
-                        if (analysisResult != null) {
-                            article.setTitleCn(analysisResult.getTranslatedTitle());
-                            article.setSummaryAiCn(analysisResult.getChineseSummary());
-                            article.setKeywordsAi(analysisResult.getKeywords());
-                            article.setCategoryAi(analysisResult.getPartition());
-                            logger.info("AI analysis successful for: {}", article.getTitle());
-                        } else {
-                            logger.warn("AI analysis returned null for: {}", article.getTitle());
-                        }
-                    }
-
-                } catch (IOException e) {
-                    logger.error("Could not fetch full content for {}: {}", title, e.getMessage());
-                }
-
-                newsArticleRepository.save(article);
-                logger.info("Saved new NBC Sports article: {}", title);
-            }
-        } catch (Exception e) {
-            logger.error("Error crawling NBC Sports news from RSS feed: {}", e.getMessage(), e);
+    private void analyzeAndSaveArticle(NewsArticle article, Document articleDoc) {
+        String mainContentHtml = extractMainHtml(articleDoc);
+        if (mainContentHtml.isBlank()) {
+            logger.warn("Extracted empty main content for URL: {}. Skipping article.", article.getUrl());
+            return;
         }
+        
+        article.setRawHtmlContent(mainContentHtml);
+
+        // Step 1: Translate the raw HTML
+        String translatedHtml = htmlTranslator.translateHtmlContent(mainContentHtml);
+
+        // Step 2: Clean the translated HTML. The AI service will return null on failure.
+        String cleanedHtml = aiService.cleanTranslatedHtml(translatedHtml);
+
+        // Step 3: Check if the cleaning was successful.
+        if (cleanedHtml == null || cleanedHtml.isBlank()) {
+            article.setTranslatedContent(null);
+            article.setTranslationStatus(0);
+            logger.warn("AI-based HTML cleaning for {} failed. Article will not be published.", article.getTitle());
+            newsArticleRepository.save(article);
+            return;
+        }
+
+        // The process was successful.
+        String cleanedContentText = Jsoup.parse(cleanedHtml).text();
+
+        article.setRawContent(cleanedContentText); // Use cleaned text for raw content
+        article.setTranslatedContent(cleanedHtml);
+        article.setTranslationStatus(1);
+
+        if (cleanedContentText.length() < 100) {
+            logger.warn("Content for '{}' is too short after cleaning (<100 chars), skipping AI analysis.", article.getTitle());
+            newsArticleRepository.save(article);
+            return;
+        }
+
+        AiAnalysisResult analysis = aiService.getAiAnalysisForArticle(article.getTitle(), cleanedContentText);
+        if (analysis != null) {
+            article.setTitleCn(analysis.getTranslatedTitle());
+            article.setSummaryAiCn(analysis.getChineseSummary());
+            article.setKeywordsAi(analysis.getKeywords());
+            article.setCategoryAi(analysis.getPartition());
+        } else {
+            logger.warn("AI analysis (summary/category) failed for '{}' after cleaning.", article.getTitle());
+        }
+
+        newsArticleRepository.save(article);
+        logger.info("Successfully processed and saved article from URL: {}", article.getUrl());
     }
-
-    public void crawlSkySportsNews() {
-        String skyRssUrl = "https://www.skysports.com/rss/11095";
-        logger.info("Crawling Sky Sports news from RSS feed: {}", skyRssUrl);
-        try {
-            Document doc = getXmlWithRetries(skyRssUrl, skyRssUrl);
-            Elements items = doc.select("item");
-            logger.info("Sky Sports RSS: Found {} items.", items.size());
-            if (items.isEmpty()) {
-                logger.warn("Sky Sports RSS: No items found in feed. Feed might be empty or structure changed. XML dump:");
-                logger.warn(doc.html());
-            }
-
-            for (Element item : items) {
-                String title = item.select("title").text();
-                String absoluteUrl = item.select("link").text();
-                
-                if (absoluteUrl.isEmpty() || newsArticleRepository.findByUrl(absoluteUrl).isPresent()) {
-                    continue;
-                }
-                
-                if (title.isEmpty()) continue;
-                logger.debug("Sky Sports RSS: Processing new article '{}' at URL {}", title, absoluteUrl);
-
-                NewsArticle article = new NewsArticle();
-                article.setTitle(title);
-                article.setUrl(absoluteUrl);
-                article.setSource("Sky Sports");
-                article.setPublishDate(LocalDateTime.now());
-
-                try {
-                    Document articleDoc = getDocumentWithRetries(absoluteUrl, skyRssUrl);
-                    article.setRawHtmlContent(articleDoc.body().html());
-                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
-                    article.setRawContent(content);
-
-                    // AI Analysis
-                    if (content.length() > 50) {
-                        logger.info("Requesting AI analysis for article: {}", article.getTitle());
-                        // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
-                        if (translatedHtml != null && !translatedHtml.isBlank()) {
-                            article.setTranslatedContent(translatedHtml);
-                            logger.info("Full content translation successful for: {}", article.getTitle());
-                        }
-
-                        // 2. Summary, keywords, and category analysis
-                        AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
-                        if (analysisResult != null) {
-                            article.setTitleCn(analysisResult.getTranslatedTitle());
-                            article.setSummaryAiCn(analysisResult.getChineseSummary());
-                            article.setKeywordsAi(analysisResult.getKeywords());
-                            article.setCategoryAi(analysisResult.getPartition());
-                            logger.info("AI analysis successful for: {}", article.getTitle());
-                        } else {
-                            logger.warn("AI analysis returned null for: {}", article.getTitle());
-                        }
-                    }
-
-                } catch (IOException e) {
-                    logger.error("Could not fetch full content for {}: {}", title, e.getMessage());
-                }
-
-                newsArticleRepository.save(article);
-                logger.info("Saved new Sky Sports article: {}", title);
-            }
-        } catch (Exception e) {
-            logger.error("Error crawling Sky Sports news from RSS feed: {}", e.getMessage(), e);
-        }
-    }
-
-    public void crawlFoxSportsNews() {
-        String foxRssUrl = "https://api.foxsports.com/v2/content/optimized-rss?partnerKey=MB0Wehpmuj2lUhuRhQaafhBjAJqaPU244mlTDK1i&size=50";
-        logger.info("Crawling Fox Sports news from RSS feed: {}", foxRssUrl);
-        try {
-            Document doc = getXmlWithRetries(foxRssUrl, foxRssUrl);
-            Elements items = doc.select("item");
-            logger.info("Fox Sports RSS: Found {} items.", items.size());
-            if (items.isEmpty()) {
-                logger.warn("Fox Sports RSS: No items found in feed. Feed might be empty or structure changed. XML dump:");
-                logger.warn(doc.html());
-            }
-
-            for (Element item : items) {
-                String title = item.select("title").text();
-                String absoluteUrl = item.select("link").text();
-
-                if (absoluteUrl.isEmpty() || newsArticleRepository.findByUrl(absoluteUrl).isPresent()) {
-                    continue;
-                }
-
-                if (title.isEmpty()) continue;
-                logger.debug("Fox Sports RSS: Processing new article '{}' at URL {}", title, absoluteUrl);
-
-
-                NewsArticle article = new NewsArticle();
-                article.setTitle(title);
-                article.setUrl(absoluteUrl);
-                article.setSource("Fox Sports");
-                article.setPublishDate(LocalDateTime.now());
-
-                try {
-                    Document articleDoc = getDocumentWithRetries(absoluteUrl, foxRssUrl);
-                    article.setRawHtmlContent(articleDoc.body().html());
-                    String content = ArticleExtractor.INSTANCE.getText(articleDoc.html());
-                    article.setRawContent(content);
-
-                    // AI Analysis
-                    if (content.length() > 50) {
-                        logger.info("Requesting AI analysis for article: {}", article.getTitle());
-                        // 1. Full content translation
-                        String translatedHtml = aiService.translateFullArticle(article.getRawHtmlContent());
-                        if (translatedHtml != null && !translatedHtml.isBlank()) {
-                            article.setTranslatedContent(translatedHtml);
-                            logger.info("Full content translation successful for: {}", article.getTitle());
-                        }
-
-                        // 2. Summary, keywords, and category analysis
-                        AiAnalysisResult analysisResult = aiService.getAiAnalysisForArticle(article.getTitle(), content);
-                        if (analysisResult != null) {
-                            article.setTitleCn(analysisResult.getTranslatedTitle());
-                            article.setSummaryAiCn(analysisResult.getChineseSummary());
-                            article.setKeywordsAi(analysisResult.getKeywords());
-                            article.setCategoryAi(analysisResult.getPartition());
-                            logger.info("AI analysis successful for: {}", article.getTitle());
-                        } else {
-                            logger.warn("AI analysis returned null for: {}", article.getTitle());
-                        }
-                    }
-
-                } catch (IOException e) {
-                    logger.error("Could not fetch full content for {}: {}", title, e.getMessage());
-                }
-
-                newsArticleRepository.save(article);
-                logger.info("Saved new Fox Sports article: {}", title);
-            }
-        } catch (Exception e) {
-            logger.error("Error crawling Fox Sports news from RSS feed: {}", e.getMessage(), e);
-        }
+    
+    private String extractSourceFromUrl(String rssUrl) {
+        if (rssUrl.contains("espn.com")) return "ESPN";
+        if (rssUrl.contains("transfermarkt")) return "Transfermarkt";
+        if (rssUrl.contains("sportsengine.com")) return "NBC Sports";
+        if (rssUrl.contains("skysports.com")) return "Sky Sports";
+        if (rssUrl.contains("foxsports.com")) return "Fox Sports";
+        return "Unknown";
     }
 
     private String getRandomUserAgent() {
@@ -426,7 +195,10 @@ public class CrawlerService {
                 break;
             }
         }
-        throw new IOException("Failed to fetch document from " + url + " after " + retries + " retries.", lastException);
+        if (lastException != null) {
+            logger.error("Failed to fetch document from " + url + " after " + retries + " retries.", lastException);
+        }
+        return null;
     }
 
     private Document getXmlWithRetries(String url, String referer) throws IOException {
@@ -453,5 +225,30 @@ public class CrawlerService {
             }
         }
         throw new IOException("Failed to connect to " + url + " after multiple retries");
+    }
+
+    private String extractMainHtml(Document doc) {
+        try {
+            // Use Boilerpipe's ArticleExtractor to get the core article HTML, preserving structure.
+            // This is the most robust method, as suggested.
+            InputSource is = new InputSource(new StringReader(doc.html()));
+            BoilerpipeSAXInput in = new BoilerpipeSAXInput(is);
+            TextDocument textDoc = in.getTextDocument();
+            ArticleExtractor.INSTANCE.process(textDoc);
+            String mainContentHtml = HTMLHighlighter.newExtractingInstance().process(textDoc, doc.html());
+
+            if (mainContentHtml == null || mainContentHtml.isBlank()) {
+                logger.warn("Boilerpipe returned empty content for {}. Falling back to full body.", doc.location());
+                return doc.body().html(); // Fallback to full body if boilerpipe fails
+            }
+            
+            logger.info("Boilerpipe extraction successful for {}.", doc.location());
+            return mainContentHtml;
+
+        } catch (Exception e) {
+            logger.error("Boilerpipe extraction failed for URL: {}. Returning empty string.", doc.location(), e);
+            // Return empty string to prevent downstream processing of potentially junk-filled body
+            return "";
+        }
     }
 }

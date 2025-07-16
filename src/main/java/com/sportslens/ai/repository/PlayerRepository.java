@@ -1,0 +1,9 @@
+package com.sportslens.ai.repository;
+
+import com.sportslens.ai.domain.Player;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface PlayerRepository extends JpaRepository<Player, Long> {
+    List<Player> findByTeamId(Long teamId);
+}

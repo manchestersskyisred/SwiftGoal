@@ -4,6 +4,7 @@ import com.sportslens.ai.domain.NewsArticle;
 import com.sportslens.ai.domain.User;
 import com.sportslens.ai.dto.UserArticleDto;
 import com.sportslens.ai.repository.UserRepository;
+import com.sportslens.ai.service.NewsArticleService;
 import com.sportslens.ai.service.UserArticleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,16 +18,24 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
+import java.util.Arrays;
 
 @Controller
 @RequestMapping("/user/articles")
 public class UserArticleController {
+
+    private static final List<String> ALL_CATEGORIES = Arrays.asList(
+            "NBA", "英超", "西甲", "德甲", "法甲", "意甲", "沙特联", "女足", "MLB", "网球", "综合体育"
+    );
 
     @Autowired
     private UserArticleService userArticleService;
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NewsArticleService newsArticleService;
 
     @GetMapping
     public String listMyArticles(Model model, @AuthenticationPrincipal UserDetails userDetails) {
@@ -51,6 +60,7 @@ public class UserArticleController {
     @GetMapping("/create")
     public String createArticleForm(Model model) {
         model.addAttribute("article", new UserArticleDto());
+        model.addAttribute("allCategories", ALL_CATEGORIES);
         return "user/create-article";
     }
 
@@ -58,9 +68,10 @@ public class UserArticleController {
     public String createArticle(@Valid @ModelAttribute("article") UserArticleDto articleDto,
                                BindingResult bindingResult,
                                @AuthenticationPrincipal UserDetails userDetails,
-                               RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes, Model model) {
         
         if (bindingResult.hasErrors()) {
+            model.addAttribute("allCategories", ALL_CATEGORIES);
             return "user/create-article";
         }
 
@@ -78,10 +89,11 @@ public class UserArticleController {
         try {
             NewsArticle savedArticle = userArticleService.createUserArticle(articleDto, user);
             redirectAttributes.addFlashAttribute("successMessage", "文章创建成功！");
-            return "redirect:/user/articles/" + savedArticle.getId();
+            return "redirect:/user/articles";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "文章创建失败：" + e.getMessage());
-            return "redirect:/user/articles/create";
+            model.addAttribute("errorMessage", "文章创建失败：" + e.getMessage());
+            model.addAttribute("allCategories", ALL_CATEGORIES);
+            return "user/create-article";
         }
     }
 
@@ -131,14 +143,11 @@ public class UserArticleController {
             return "redirect:/user/articles?error=article_not_found";
         }
 
-        NewsArticle article = optionalArticle.get();
-        UserArticleDto articleDto = new UserArticleDto();
-        articleDto.setTitle(article.getTitle());
-        articleDto.setContent(article.getRawContent());
-        articleDto.setSource(article.getSource());
+        UserArticleDto articleDto = userArticleService.mapEntityToDto(optionalArticle.get());
 
         model.addAttribute("article", articleDto);
         model.addAttribute("articleId", id);
+        model.addAttribute("allCategories", ALL_CATEGORIES);
         
         return "user/edit-article";
     }
@@ -148,9 +157,11 @@ public class UserArticleController {
                                @Valid @ModelAttribute("article") UserArticleDto articleDto,
                                BindingResult bindingResult,
                                @AuthenticationPrincipal UserDetails userDetails,
-                               RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes, Model model) {
         
         if (bindingResult.hasErrors()) {
+            model.addAttribute("articleId", id);
+            model.addAttribute("allCategories", ALL_CATEGORIES);
             return "user/edit-article";
         }
 
@@ -168,10 +179,12 @@ public class UserArticleController {
         try {
             userArticleService.updateUserArticle(id, articleDto, user);
             redirectAttributes.addFlashAttribute("successMessage", "文章更新成功！");
-            return "redirect:/user/articles/" + id;
+            return "redirect:/user/articles";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "文章更新失败：" + e.getMessage());
-            return "redirect:/user/articles/" + id + "/edit";
+            model.addAttribute("errorMessage", "文章更新失败：" + e.getMessage());
+            model.addAttribute("articleId", id);
+            model.addAttribute("allCategories", ALL_CATEGORIES);
+            return "user/edit-article";
         }
     }
 
@@ -200,4 +213,4 @@ public class UserArticleController {
         
         return "redirect:/user/articles";
     }
-}
+} 

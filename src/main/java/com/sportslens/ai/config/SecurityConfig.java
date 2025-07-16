@@ -38,13 +38,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/", "/index", "/css/**", "/js/**", "/images/**", "/register", "/login").permitAll()
-                .requestMatchers("/user/articles/**").authenticated() // Require authentication for user articles
+                .requestMatchers("/", "/index", "/css/**", "/js/**", "/images/**", "/avatars/**", "/register", "/login", "/profile/**", "/article/**", "/category/**", "/recommendations", "/search").permitAll()
+                .requestMatchers("/user/**").authenticated()
                 .anyRequest().authenticated()
             )
             .formLogin(formLogin -> formLogin
                 .loginPage("/login")
-                .defaultSuccessUrl("/", true)
+                .defaultSuccessUrl("/", false)
                 .permitAll()
             )
             .logout(logout -> logout
@@ -57,4 +57,4 @@ public class SecurityConfig {
             );
         return http.build();
     }
-}
+} 

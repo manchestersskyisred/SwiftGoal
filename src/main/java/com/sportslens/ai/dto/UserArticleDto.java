@@ -10,11 +10,14 @@ public class UserArticleDto {
     private String title;
 
     @NotBlank(message = "内容不能为空")
-    @Size(min = 50, max = 10000, message = "内容长度必须在50-10000个字符之间")
+    @Size(min = 50, message = "内容长度必须在50-10000个字符之间")
     private String content;
 
     @Size(max = 100, message = "来源长度不能超过100个字符")
     private String source;
+    
+    @NotBlank(message = "必须选择一个分区")
+    private String category;
 
     // Constructors
     public UserArticleDto() {}
@@ -50,12 +53,21 @@ public class UserArticleDto {
         this.source = source;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+    
     @Override
     public String toString() {
         return "UserArticleDto{" +
                 "title='" + title + '\'' +
                 ", content='" + (content != null ? content.substring(0, Math.min(content.length(), 50)) + "..." : null) + '\'' +
                 ", source='" + source + '\'' +
+                ", category='" + category + '\'' +
                 '}';
     }
-}
+} 
