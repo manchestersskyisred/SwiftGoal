@@ -40,7 +40,7 @@
 
             <div sec:authorize="!isAuthenticated()">
                 <a th:href="@{/login}" class="btn btn-outline-primary me-2">登录</a>
-                <a th:href="@{/register}" class="btn btn-primary">注册</a>
+                <a th:href="@{/user/register}" class="btn btn-primary">注册</a>
             </div>
 
             <div sec:authorize="isAuthenticated()" class="dropdown text-end">
@@ -49,7 +49,7 @@
                 </a>
                 <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
                     <li><a class="dropdown-item" th:href="@{/user/articles}">我的文章</a></li>
-                    <li><a class="dropdown-item" th:href="@{/profile}">个人资料</a></li>
+                    <li><a class="dropdown-item" th:href="@{/user/{username}(username=${#authentication.name})}">个人资料</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form th:action="@{/logout}" method="post" class="d-inline">
@@ -61,6 +61,7 @@
         </div>
     </div>
 </div>
+
 
 <div class="container-fluid">
     <div class="row">

@@ -52,7 +52,7 @@
             注册成功！请登录。
         </div>
 
-        <form th:action="@{/login}" method="post">
+        <form th:action="@{/perform_login}" method="post">
             <div class="form-group">
                 <label for="username">用户名</label>
                 <input type="text" id="username" name="username" required autofocus>
@@ -71,7 +71,7 @@
         </form>
 
         <div class="footer-link">
-            <span>还没有账号？</span> <a th:href="@{/register}">立即注册</a>
+            <span>还没有账号？</span> <a th:href="@{/user/register}">立即注册</a>
         </div>
     </div>
 </body>
