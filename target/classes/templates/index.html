@@ -109,6 +109,7 @@
                              <div class="card-body">
                                  <h5 class="card-title" th:text="${article.titleCn != null ? article.titleCn : article.title}">Article Title</h5>
                                  <h6 class="card-subtitle mb-2 text-muted" th:text="${article.source} + ' - ' + ${#temporals.format(article.publishDate, 'MMM dd, yyyy HH:mm')}">Source and Date</h6>
+                                 <h6 class="card-like and recommend" th:text="${article.likes.size()} +' like ' + '  -  ' + ${article.comments.size()}+' comment'">like and recommend</h6>
                                  <p class="card-text" th:text="${article.summaryAiCn != null ? article.summaryAiCn : article.summaryAi}"></p>
                              </div>
                              <div class="card-footer bg-transparent border-0">

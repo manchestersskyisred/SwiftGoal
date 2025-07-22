@@ -29,7 +29,7 @@
 
         <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
 
-        <form th:action="@{/register}" th:object="${user}" method="post">
+        <form th:action="@{/user/register}" th:object="${user}" method="post">
             <div class="form-group">
                 <label for="username">用户名</label>
                 <input type="text" id="username" th:field="*{username}" required>

@@ -174,6 +174,7 @@
                 <div class="stats">
                     <div>粉丝: <span th:text="${user.followers.size()}">0</span></div>
                     <div>关注: <span th:text="${user.following.size()}">0</span></div>
+                    <div>文章数: <span th:text="${user.articles.size()}">0</span></div>
                 </div>
                 <div class="profile-actions" th:if="${currentUser != null && currentUser.username != user.username}">
                     <form th:if="${!isFollowing}" th:action="@{/follow/{username}(username=${user.username})}" method="post">
