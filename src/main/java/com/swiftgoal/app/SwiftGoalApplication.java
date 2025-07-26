@@ -5,10 +5,14 @@ import jakarta.annotation.Resource;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
-@EnableScheduling
+@EntityScan("com.swiftgoal.app.repository.entity")
+@EnableJpaRepositories("com.swiftgoal.app.repository")
+@EnableAsync
 public class SwiftGoalApplication {
 
     @Resource

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猜球员游戏 - SwiftGoal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <style>
+        :root {
+            --primary-color: #1a1a1a;
+            --secondary-color: #2d2d2d;
+            --accent-color: #00a651;
+            --text-light: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: #404040;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .game-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00a651, #00d4aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .game-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .game-controls {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .mode-btn {
+            background: linear-gradient(45deg, var(--accent-color), #00d4aa);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 166, 81, 0.3);
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 166, 81, 0.4);
+        }
+
+        .mode-btn.outline {
+            background: transparent;
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .mode-btn.outline:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .search-section {
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            position: relative;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1.5rem 1rem;
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            color: var(--text-light);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(0, 166, 81, 0.3);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: #00d4aa;
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(45, 45, 45, 0.95);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-result-item {
+            padding: 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .game-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .grid-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .guess-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .guess-row:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .guess-cell {
+            padding: 0.8rem;
+            text-align: center;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-correct {
+            background: linear-gradient(45deg, var(--success-color), #20c997);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .feedback-partial {
+            background: linear-gradient(45deg, var(--warning-color), #ffca2c);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .feedback-wrong {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+        }
+
+        .feedback-higher {
+            background: linear-gradient(45deg, var(--info-color), #138496);
+            color: white;
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+        }
+
+        .feedback-lower {
+            background: linear-gradient(45deg, var(--danger-color), #c82333);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .game-over {
+            text-align: center;
+            margin: 3rem 0;
+            padding: 3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .game-over h3 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, var(--accent-color), #00d4aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .game-over p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.9;
+        }
+
+        .notification-success {
+            background-color: #28a745;
+        }
+
+        .notification-info {
+            background-color: #17a2b8;
+        }
+
+        .notification-warning {
+            background-color: #ffc107;
+        }
+
+        .notification-error {
+            background-color: #dc3545;
+        }
+
+        .notification-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-message {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 1rem;
+            }
+            
+            .game-title {
+                font-size: 2.5rem;
+            }
+            
+            .game-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .grid-header,
+            .guess-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .guess-cell {
+                font-size: 0.8rem;
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Unified Navbar -->
+<div th:replace="~{index :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-2">
+            <div th:replace="~{index :: sidebar}"></div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="game-container">
+                <!-- Game Header -->
+                <div class="game-header">
+                    <h1 class="game-title">
+                        <i class="fas fa-gamepad me-3"></i>猜球员游戏
+                    </h1>
+                    <p class="game-subtitle">猜出神秘球员！每天都有新的挑战</p>
+                    
+                    <div class="game-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="attemptCounter">0</div>
+                            <div class="stat-label">尝试次数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">8</div>
+                            <div class="stat-label">最大尝试</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="remainingAttempts">8</div>
+                            <div class="stat-label">剩余次数</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Controls -->
+                <div class="game-controls">
+                    <button type="button" class="mode-btn" onclick="startGame('DAILY_CHALLENGE')">
+                        <i class="fas fa-calendar-day me-2"></i>每日挑战
+                    </button>
+                    <button type="button" class="mode-btn outline" onclick="startGame('UNLIMITED')">
+                        <i class="fas fa-infinity me-2"></i>无限模式
+                    </button>
+                    <button type="button" class="mode-btn outline" onclick="showAnswer()">
+                        <i class="fas fa-eye me-2"></i>显示答案
+                    </button>
+                </div>
+
+                <!-- Search Section -->
+                <div class="search-section">
+                    <div class="search-container">
+                        <input type="text" id="playerSearch" class="search-input" 
+                               placeholder="输入球员姓名开始搜索..." autocomplete="off">
+                        <button class="search-btn" onclick="makeGuess()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+
+                <!-- Loading -->
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p class="mt-3">正在处理...</p>
+                </div>
+
+                <!-- Game Grid -->
+                <div id="gameGrid" class="game-grid">
+                    <!-- Grid header -->
+                    <div class="grid-header">
+                        <div>球员</div>
+                        <div>国籍</div>
+                        <div>联赛</div>
+                        <div>俱乐部</div>
+                        <div>位置</div>
+                        <div>年龄</div>
+                        <div>号码</div>
+                        <div>身价</div>
+                    </div>
+                    
+                    <!-- Empty state -->
+                    <div id="emptyState" class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h4>开始你的猜测之旅</h4>
+                        <p>在上方搜索框中输入球员姓名，开始猜测神秘球员！</p>
+                    </div>
+                    
+                    <!-- Guess rows will be added here dynamically -->
+                </div>
+
+                <!-- Game Over Message -->
+                <div id="gameOver" class="game-over" style="display: none;">
+                    <h3 id="gameOverTitle"></h3>
+                    <p id="gameOverMessage"></p>
+                    <button class="mode-btn" onclick="startGame('DAILY_CHALLENGE')">
+                        <i class="fas fa-redo me-2"></i>重新开始
+                    </button>
+                </div>
+
+                <!-- Answer Display Section -->
+                <div id="answerDisplay" class="game-over" style="display: none;">
+                    <h3>正确答案</h3>
+                    <div id="answerContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="how-to-play-container mt-5 p-4" style="background: rgba(255, 255, 255, 0.05); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);">
+                <h4>游戏玩法</h4>
+                <hr style="border-color: rgba(255, 255, 255, 0.2);">
+                
+                <h5>游戏模式:</h5>
+                <p><strong>每日挑战:</strong> 每天有三位来自英超的新球员等你来猜。</p>
+                <p><strong>无限模式:</strong> 你可以猜测全球身价最高的前250名球员。</p>
+
+                <h5>如何猜测:</h5>
+                <p>游戏的目标是在八次尝试内猜出目标球员。每次猜测后，系统会显示你的答案与目标球员在七个类别中的接近程度，以帮助你进行下一次猜测。这七个类别分别是：国籍、联赛、俱乐部、位置、年龄、球衣号码和市场价值。</p>
+                
+                <h5>示例:</h5>
+                <p>在示例中，你的第一次尝试是爱德华多·卡马文加。方块提示你：</p>
+                <ol>
+                    <li>你的国籍猜对了。</li>
+                    <li>目标球员的位置是中场，但不是中前卫（例如，可能是攻击型中场）。</li>
+                    <li>该球员的市场价值高于8000万欧元。</li>
+                </ol>
+                <p>你可以根据这些提示进行下一次尝试。如果遇到困难，可以使用详细搜索功能来帮助你。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+let currentGameState = /*[[${gameState}]]*/ null;
+let selectedPlayer = null;
+let searchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (currentGameState) {
+        updateGameDisplay();
+    }
+    
+    // 搜索框事件监听
+    const searchInput = document.getElementById('playerSearch');
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            hideSearchResults();
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            searchPlayers(query);
+        }, 300);
+    });
+    
+    // 点击外部隐藏搜索结果
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            hideSearchResults();
+        }
+    });
+    
+    // 回车键提交
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            makeGuess();
+        }
+    });
+});
+
+function searchPlayers(query) {
+    fetch(`/game/api/players/search?query=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySearchResults(data.players);
+            } else {
+                console.error('Search error:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+        });
+}
+
+function displaySearchResults(players) {
+    const resultsContainer = document.getElementById('searchResults');
+    resultsContainer.innerHTML = '';
+    
+    if (players.length === 0) {
+        resultsContainer.innerHTML = '<div class="search-result-item">没有找到球员</div>';
+    } else {
+        players.forEach(player => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            // 使用新的displayName字段
+            item.textContent = player.displayName || player.fullNameEn;
+            item.onclick = () => selectPlayer(player);
+            resultsContainer.appendChild(item);
+        });
+    }
+    
+    resultsContainer.style.display = 'block';
+}
+
+function hideSearchResults() {
+    document.getElementById('searchResults').style.display = 'none';
+}
+
+function selectPlayer(player) {
+    selectedPlayer = player;
+    // 使用新的displayName字段
+    document.getElementById('playerSearch').value = player.displayName || player.fullNameEn;
+    hideSearchResults();
+}
+
+function makeGuess() {
+    if (!selectedPlayer) {
+        showNotification('请先选择一个球员', 'warning');
+        return;
+    }
+    
+    if (!currentGameState || currentGameState.gameOver) {
+        showNotification('游戏已结束，请重新开始', 'warning');
+        return;
+    }
+    
+    showLoading();
+    
+    fetch('/game/api/guess', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            playerId: selectedPlayer.id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            addGuessRow(data.result);
+            updateGameState(data.result);
+            currentGameState = data.gameState;
+            
+            if (data.result.isCorrect || currentGameState.gameOver) {
+                showGameOver();
+            }
+            
+            // 清空选择
+            selectedPlayer = null;
+            document.getElementById('playerSearch').value = '';
+        } else {
+            showNotification(data.message || '猜测失败', 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Guess error:', error);
+        showNotification('猜测失败，请重试', 'error');
+    });
+}
+
+function addGuessRow(result) {
+    const grid = document.getElementById('gameGrid');
+    const emptyState = document.getElementById('emptyState');
+    
+    // 隐藏空状态
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    const row = document.createElement('div');
+    row.className = 'guess-row';
+    
+    const player = result.guessedPlayer;
+    
+    // 获取球员详细信息
+    fetch(`/game/api/players/${player.id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const playerDetail = data.player;
+                row.innerHTML = `
+                    <div class="guess-cell">${playerDetail.fullName}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.nationalityFeedback)}">${playerDetail.nationality || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.leagueFeedback)}">${playerDetail.leagueName || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.clubFeedback)}">${playerDetail.clubName || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.positionFeedback)}">${playerDetail.position || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.ageFeedback)}">${playerDetail.age || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.numberFeedback)}">${playerDetail.jerseyNumber || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.valueFeedback)}">${formatMarketValue(playerDetail.marketValueEur)}</div>
+                `;
+            } else {
+                // 如果获取详细信息失败，使用基本信息
+                row.innerHTML = `
+                    <div class="guess-cell">${player.fullNameCn}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.nationalityFeedback)}">${player.nationalityEn || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.leagueFeedback)}">N/A</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.clubFeedback)}">N/A</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.positionFeedback)}">${player.positionEn || 'N/A'}</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.ageFeedback)}">N/A</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.numberFeedback)}">N/A</div>
+                    <div class="guess-cell feedback-${getFeedbackClass(result.valueFeedback)}">N/A</div>
+                `;
+            }
+            
+            // 插入到header之后
+            const header = grid.querySelector('.grid-header');
+            header.parentNode.insertBefore(row, header.nextSibling);
+        })
+        .catch(error => {
+            console.error('Error fetching player details:', error);
+            // 如果获取详细信息失败，使用基本信息
+            row.innerHTML = `
+                <div class="guess-cell">${player.fullNameCn}</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.nationalityFeedback)}">${player.nationalityEn || 'N/A'}</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.leagueFeedback)}">N/A</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.clubFeedback)}">N/A</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.positionFeedback)}">${player.positionEn || 'N/A'}</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.ageFeedback)}">N/A</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.numberFeedback)}">N/A</div>
+                <div class="guess-cell feedback-${getFeedbackClass(result.valueFeedback)}">N/A</div>
+            `;
+            
+            // 插入到header之后
+            const header = grid.querySelector('.grid-header');
+            header.parentNode.insertBefore(row, header.nextSibling);
+        });
+}
+
+function getFeedbackClass(feedback) {
+    switch(feedback) {
+        case 'CORRECT': return 'correct';
+        case 'PARTIAL': return 'partial';
+        case 'HIGHER': return 'higher';
+        case 'LOWER': return 'lower';
+        default: return 'wrong';
+    }
+}
+
+function calculateAge(birthDate) {
+    if (!birthDate) return 'N/A';
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+function formatMarketValue(value) {
+    if (!value) return 'N/A';
+    if (value >= 1000000) {
+        return (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+        return (value / 1000).toFixed(1) + 'K';
+    }
+    return value.toString();
+}
+
+function updateGameState(result) {
+    currentGameState.attemptsMade = result.attemptNumber;
+    currentGameState.previousGuesses.push(result);
+    
+    if (result.isCorrect) {
+        currentGameState.won = true;
+        currentGameState.gameOver = true;
+    } else if (currentGameState.attemptsMade >= currentGameState.maxAttempts) {
+        currentGameState.gameOver = true;
+    }
+    
+    updateGameDisplay();
+}
+
+function updateGameDisplay() {
+    document.getElementById('attemptCounter').textContent = currentGameState.attemptsMade;
+    document.getElementById('remainingAttempts').textContent = currentGameState.maxAttempts - currentGameState.attemptsMade;
+}
+
+function showGameOver() {
+    const gameOver = document.getElementById('gameOver');
+    const title = document.getElementById('gameOverTitle');
+    const message = document.getElementById('gameOverMessage');
+    
+    if (currentGameState.won) {
+        title.textContent = '🎉 恭喜！你猜对了！';
+        message.textContent = `你在${currentGameState.attemptsMade}次尝试中成功猜出了神秘球员！`;
+    } else {
+        title.textContent = '😔 游戏结束';
+        message.textContent = '你已经用完了所有尝试次数。明天再来挑战吧！';
+    }
+    
+    gameOver.style.display = 'block';
+}
+
+function startGame(mode) {
+    showLoading();
+    
+    fetch('/game/api/start', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            mode: mode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            // 彻底重置所有状态
+            currentGameState = data.gameState;
+            selectedPlayer = null;
+            document.getElementById('playerSearch').value = '';
+            
+            // 清空游戏网格
+            const grid = document.getElementById('gameGrid');
+            const header = grid.querySelector('.grid-header');
+            const emptyState = document.getElementById('emptyState');
+            
+            // 清除所有猜测行
+            const guessRows = grid.querySelectorAll('.guess-row');
+            guessRows.forEach(row => row.remove());
+            
+            // 显示空状态
+            if (emptyState) {
+                emptyState.style.display = 'block';
+            }
+            
+            // 隐藏游戏结束消息
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('answerDisplay').style.display = 'none'; // Hide answer display
+            document.querySelector('.search-section').style.display = 'block'; // Show search section
+            
+            updateGameDisplay();
+            
+            // 显示成功消息
+            const modeText = mode === 'DAILY_CHALLENGE' ? '每日挑战' : '无限模式';
+            showNotification(`${modeText}已开始！`, 'success');
+        } else {
+            showNotification(data.message || '开始游戏失败', 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Start game error:', error);
+        showNotification('开始游戏失败，请重试', 'error');
+    });
+}
+
+function showAnswer() {
+    if (!currentGameState || currentGameState.gameOver) {
+        showNotification('游戏尚未开始或已结束', 'warning');
+        return;
+    }
+
+    showLoading();
+    fetch('/game/api/answer')
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success && data.player) {
+                const player = data.player;
+                const answerDisplay = document.getElementById('answerDisplay');
+                const answerContent = document.getElementById('answerContent');
+                
+                // Populate the answer card
+                answerContent.innerHTML = `
+                    <img src="${player.photoUrl || 'https://via.placeholder.com/100'}" alt="Player Photo" class="rounded-circle my-3" style="width: 100px; height: 100px;">
+                    <h4>${player.displayName || player.fullNameEn}</h4>
+                    <p><strong>国籍:</strong> ${player.nationalityEn} | <strong>俱乐部:</strong> ${player.clubName || 'N/A'} | <strong>位置:</strong> ${player.positionEn}</p>
+                `;
+                
+                // Show the answer card
+                answerDisplay.style.display = 'block';
+
+                // Mark game as over since answer is revealed
+                currentGameState.gameOver = true;
+                // You might want to hide the guess input now
+                document.querySelector('.search-section').style.display = 'none';
+
+            } else {
+                showNotification(data.message || '无法获取答案', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Show answer error:', error);
+            showNotification('获取答案失败，请重试', 'error');
+        });
+}
+
+function showLoading() {
+    document.getElementById('loading').style.display = 'block';
+}
+
+function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+}
+
+// 添加通知功能
+function showNotification(message, type = 'info') {
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(notification);
+    
+    // 自动移除
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
+</body>
+</html> 

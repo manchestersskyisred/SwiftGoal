@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+    <title th:text="${leagueName} + ' Standings - SwiftGoal'">League Standings</title>
+    <style>
+        .standings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .standings-table th, .standings-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .standings-table th {
+            background-color: #f2f2f2;
+        }
+        .standings-table .team-cell {
+            text-align: left;
+            display: flex;
+            align-items: center;
+        }
+        .standings-table .team-logo {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+        }
+        .form-cell .form-status {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 2px;
+            line-height: 20px;
+            color: white;
+            font-size: 12px;
+        }
+        .form-status.W { background-color: #28a745; } /* Green for Win */
+        .form-status.D { background-color: #ffc107; } /* Amber for Draw */
+        .form-status.L { background-color: #dc3545; } /* Red for Lose */
+    </style>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1 th:text="${leagueName} + ' Standings (2023/2024)'">League Standings</h1>
+
+    <div th:if="${standings.isEmpty()}">
+        <p>Standings data is not available for this league at the moment.</p>
+    </div>
+
+    <div th:unless="${standings.isEmpty()}" class="table-responsive">
+        <table class="table table-striped table-hover standings-table">
+            <thead class="thead-dark">
+            <tr>
+                <th>#</th>
+                <th style="text-align: left;">Team</th>
+                <th>MP</th>
+                <th>W</th>
+                <th>D</th>
+                <th>L</th>
+                <th>G</th>
+                <th>GD</th>
+                <th>Pts</th>
+                <th>Last 5</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${standings}">
+                <td th:text="${row.rank}">1</td>
+                <td>
+                    <div class="team-cell">
+                        <img th:src="${row.teamLogoUrl}" th:alt="${row.teamName}" class="team-logo"/>
+                        <!-- This is a temporary link to the first player of a team for demo purposes -->
+                        <!-- A proper implementation would link to a team roster page -->
+                        <a th:href="@{/players/1}" th:text="${row.teamName}">Team Name</a>
+                    </div>
+                </td>
+                <td th:text="${row.played}">0</td>
+                <td th:text="${row.win}">0</td>
+                <td th:text="${row.draw}">0</td>
+                <td th:text="${row.lose}">0</td>
+                <td th:text="${row.goalsFor} + ':' + ${row.goalsAgainst}">0:0</td>
+                <td th:text="${row.goalsDiff}">0</td>
+                <td th:text="${row.points}" style="font-weight: bold;">0</td>
+                <td>
+                    <div class="form-cell">
+                        <span th:each="status : ${#strings.listSplit(row.form, '')}"
+                              th:class="'form-status ' + ${status}"
+                              th:text="${status}">
+                        </span>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html> 

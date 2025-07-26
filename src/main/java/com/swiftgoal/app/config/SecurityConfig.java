@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ContentSecurityPolicyHeaderWriter;
 
 import java.util.UUID;
 
@@ -39,7 +40,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**")) // Example: ignore CSRF for API routes if they use token auth
+                .headers(headers -> headers
+                        .addHeaderWriter(new ContentSecurityPolicyHeaderWriter(
+                                "img-src 'self' data: https://tmssl.akamaized.net;"
+                        ))
+                )
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/game/api/**")) // 只对游戏API关闭CSRF
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/",
@@ -52,7 +58,15 @@ public class SecurityConfig {
                                 "/style.css",
                                 "/script.js",
                                 "/favicon.ico",
-                                "/user-avatars/**"
+                                "/user-avatars/**",
+                                "/game/**", // 允许访问游戏页面和API
+                                "/game/play", // 游戏页面
+                                "/game/api/**", // 游戏API
+                                "/api/admin/**", // 数据导入API
+                                "/test/**", // 测试API
+                                "/css/**", // CSS文件
+                                "/js/**", // JavaScript文件
+                                "/images/**" // 图片文件
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

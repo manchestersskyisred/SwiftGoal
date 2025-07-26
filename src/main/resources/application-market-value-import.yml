@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: swift-goal-market-value-import
+  datasource:
+    url: jdbc:postgresql://localhost:5432/swiftgoal
+    username: kerwinlv
+    password: '123456'
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+
+server:
+  port: -1 # Disable web server
+
+api:
+  football-data:
+    token: ${API_FOOTBALL_DATA_TOKEN:f545333b00a64a819b3a99e58529dcbc}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE 

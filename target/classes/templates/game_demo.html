@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猜球员游戏 (演示)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/styles.css"> <!-- 假设您有一个通用的样式文件 -->
+    <style>
+        body { background-color: #f0f2f5; }
+        .guess-row .form-control { text-align: center; font-weight: bold; }
+        .correct { background-color: #d4edda; color: #155724; }
+        .partial { background-color: #fff3cd; color: #856404; }
+        .incorrect { background-color: #f8d7da; color: #721c24; }
+        .arrow-up::after { content: ' ↑'; color: #155724; }
+        .arrow-down::after { content: ' ↓'; color: #721c24; }
+        #player-search-results { max-height: 300px; overflow-y: auto; }
+        .search-result-item img { width: 40px; height: 40px; border-radius: 50%; }
+        #answer-card { border: 2px dashed #0d6efd; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-2">
+            <div th:replace="~{index :: sidebar}"></div>
+        </div>
+        <div class="col-lg-10">
+            <main class="container py-4">
+                <div class="text-center mb-4">
+                    <h2>猜球员游戏</h2>
+                    <p class="lead">根据球员的联赛、俱乐部、国籍、位置、年龄和号码，猜出神秘球员。</p>
+                </div>
+
+                <!-- 游戏板 -->
+                <div class="guesses-container mb-4">
+                    <div class="row fw-bold text-center text-muted mb-2 d-none d-md-flex">
+                        <div class="col">联赛</div>
+                        <div class="col">俱乐部</div>
+                        <div class="col">国籍</div>
+                        <div class="col">位置</div>
+                        <div class="col">年龄</div>
+                        <div class="col">号码</div>
+                    </div>
+
+                    <!-- 演示：第一次错误猜测 -->
+                    <div class="guess-row row g-2 mb-2">
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect" value="西甲" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect" value="皇家马德里" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control partial" value="巴西" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect" value="前锋" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect arrow-down" value="23" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect arrow-down" value="7" readonly></div>
+                    </div>
+
+                    <!-- 演示：第二次部分正确猜测 -->
+                    <div class="guess-row row g-2 mb-2">
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="英超" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control partial" value="切尔西" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect" value="英格兰" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="中场" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="25" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control incorrect arrow-up" value="8" readonly></div>
+                    </div>
+                     <!-- 演示：猜对了 -->
+                     <div class="guess-row row g-2 mb-2">
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="英超" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="阿森纳" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="挪威" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="中场" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="25" readonly></div>
+                        <div class="col-md col-12"><input type="text" class="form-control correct" value="10" readonly></div>
+                    </div>
+                </div>
+
+                <!-- 游戏结束/答案揭晓 -->
+                <div id="answer-card" class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title">恭喜你，猜对了!</h4>
+                        <img src="https://img.a.transfermarkt.technology/portrait/header/418560-1698659542.jpg" alt="Player Photo" class="rounded-circle my-3" style="width: 100px; height: 100px;">
+                        <h5 class="card-text">正确答案是：<strong>马丁·厄德高</strong></h5>
+                        <button class="btn btn-primary mt-3">再玩一局 (无限模式)</button>
+                    </div>
+                </div>
+
+                <!-- 玩家输入区 -->
+                <div class="input-group mt-4">
+                    <input type="text" id="player-search-input" class="form-control" placeholder="输入球员姓名开始猜测..." autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button">提交</button>
+                </div>
+                <!-- 搜索结果 -->
+                <div id="player-search-results" class="list-group position-absolute bg-white shadow" style="z-index: 1000;">
+                    <!-- 动态加载 -->
+                </div>
+
+            </main>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

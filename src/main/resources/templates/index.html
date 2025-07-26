@@ -35,7 +35,7 @@
             </ul>
 
             <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3" th:action="@{/search}">
-                <input type="search" name="query" class="form-control" placeholder="搜索新闻..." aria-label="Search" th:value="${searchQuery}">
+                <input type="search" name="query" class="form-control" placeholder="搜索球员、球队、新闻..." aria-label="Search" th:value="${searchQuery}">
             </form>
 
             <div sec:authorize="!isAuthenticated()">
@@ -71,6 +71,11 @@
                     <li class="nav-item">
                         <a href="/" class="nav-link" th:classappend="${currentCategory == 'Home' ? 'active' : ''}" aria-current="page">
                             <i class="fas fa-home me-2"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a th:href="@{/game/play}" class="nav-link link-dark">
+                            <i class="fas fa-gamepad me-2"></i> 猜球员游戏
                         </a>
                     </li>
                 </ul>

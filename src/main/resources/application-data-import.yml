@@ -1,0 +1,50 @@
+# 数据导入模式配置文件
+# 用于专门的数据导入任务
+
+spring:
+  # 数据库配置
+  datasource:
+    url: jdbc:postgresql://localhost:5432/swiftgoal
+    username: kerwinlv
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  # Flyway配置
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+# 应用配置
+app:
+  mode: data-import
+  
+# API配置
+api:
+  football-data:
+    base-url: https://api.football-data.org/v4
+    token: f545333b00a64a819b3a99e58529dcbc
+
+# 日志配置
+logging:
+  level:
+    com.swiftgoal.app: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 服务器配置（数据导入模式下禁用Web服务器）
+server:
+  port: -1  # 禁用Web服务器 

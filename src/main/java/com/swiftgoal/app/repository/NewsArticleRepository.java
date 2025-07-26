@@ -25,10 +25,12 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     @Query("SELECT na FROM NewsArticle na WHERE na.categoryAi = :category AND na.userGenerated = false ORDER BY na.publishDate DESC")
     List<NewsArticle> findByCategory(@Param("category") String category);
 
-    @Query("SELECT DISTINCT na.categoryAi FROM NewsArticle na WHERE na.userGenerated = false AND na.categoryAi IS NOT NULL")
+    @Query("SELECT DISTINCT n.categoryAi FROM NewsArticle n WHERE n.categoryAi IS NOT NULL AND n.categoryAi <> ''")
     List<String> findDistinctCategories();
 
     List<NewsArticle> findByTitleContainingIgnoreCase(String title);
 
     Page<NewsArticle> findByCategoryAi(String categoryAi, Pageable pageable);
+
+    Page<NewsArticle> findByTitleCnNotIn(List<String> titles, Pageable pageable);
 }

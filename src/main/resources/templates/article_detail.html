@@ -111,11 +111,8 @@
                     <!-- Tab Content -->
                     <div class="tab-content" id="articleTabContent">
                         <div class="tab-pane fade show active" id="translated-content" role="tabpanel" aria-labelledby="translated-tab">
-                            <div th:if="${article.translatedContent != null and not #strings.isEmpty(article.translatedContent)}" th:utext="${article.translatedContent}">
-                                <!-- Translated content will be injected here -->
-                            </div>
-                            <div th:if="${article.translatedContent == null or #strings.isEmpty(article.translatedContent)}" class="alert alert-warning">
-                                Translation not available for this article.
+                            <div th:utext="${article.rawHtmlContent}">
+                                <!-- The rich, translated HTML content will be rendered here -->
                             </div>
                         </div>
                         <div class="tab-pane fade" id="original-content" role="tabpanel" aria-labelledby="original-tab">

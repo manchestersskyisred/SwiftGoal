@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Results - SwiftGoal</title>
+    <title>搜索结果 - SwiftGoal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/css/styles.css}">
@@ -17,6 +17,35 @@
         .article-card-hover:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        }
+        .search-result-card {
+            transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+        }
+        .search-result-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+        }
+        .player-avatar {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .team-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .search-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            border-bottom: 2px solid transparent;
+        }
+        .search-tabs .nav-link.active {
+            color: #0d6efd;
+            border-bottom-color: #0d6efd;
+            background: none;
         }
     </style>
 </head>
@@ -33,24 +62,148 @@
 
         <div class="col-lg-10">
             <main class="container py-4">
-                <h2 th:if="${searchQuery}">Search Results for: <span class="text-primary" th:text="${searchQuery}"></span></h2>
+                <h2 th:if="${searchQuery}">搜索结果: <span class="text-primary" th:text="${searchQuery}"></span></h2>
                 
-                <div th:if="${articles.isEmpty()}" class="alert alert-info" role="alert">
-                    No articles found matching your search query.
-                </div>
+                <!-- Search Tabs -->
+                <ul class="nav nav-tabs search-tabs mb-4" id="searchTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                            <i class="fas fa-search me-2"></i>全部
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="players-teams-tab" data-bs-toggle="tab" data-bs-target="#players-teams" type="button" role="tab">
+                            <i class="fas fa-users me-2"></i>球员球队
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="news-tab" data-bs-toggle="tab" data-bs-target="#news" type="button" role="tab">
+                            <i class="fas fa-newspaper me-2"></i>新闻
+                        </button>
+                    </li>
+                </ul>
 
-                <div id="articles-container" class="row">
-                    <!-- Search results are not paginated in this version -->
-                    <div th:each="article : ${articles}" class="col-lg-12 mb-4">
-                        <div class="card h-100 shadow-sm article-card-hover">
-                             <div class="card-body">
-                                 <h5 class="card-title" th:text="${article.titleCn != null ? article.titleCn : article.title}">Article Title</h5>
-                                 <h6 class="card-subtitle mb-2 text-muted" th:text="${article.source} + ' - ' + ${#temporals.format(article.publishDate, 'MMM dd, yyyy HH:mm')}">Source and Date</h6>
-                                 <p class="card-text" th:text="${article.summaryAiCn != null ? article.summaryAiCn : article.summaryAi}"></p>
-                             </div>
-                             <div class="card-footer bg-transparent border-0">
-                                  <a th:href="@{/article/{id}(id=${article.id})}" class="btn btn-primary btn-sm">阅读更多</a>
-                             </div>
+                <!-- Tab Content -->
+                <div class="tab-content" id="searchTabContent">
+                    <!-- All Results Tab -->
+                    <div class="tab-pane fade show active" id="all" role="tabpanel">
+                        <!-- Players and Teams Section -->
+                        <div th:if="${searchResults != null and !searchResults.isEmpty()}" class="mb-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-users text-primary me-2"></i>球员和球队
+                            </h4>
+                            <div class="row">
+                                <div th:each="result : ${searchResults}" class="col-lg-6 col-xl-4 mb-4">
+                                    <div class="card search-result-card h-100">
+                                        <div class="card-body d-flex align-items-center">
+                                            <div class="me-3">
+                                                <img th:if="${result.type == 'player'}" th:src="${result.imageUrl != null ? result.imageUrl : '/images/default-player.png'}" 
+                                                     class="player-avatar" th:alt="${result.displayName}">
+                                                <img th:if="${result.type == 'team'}" th:src="${result.imageUrl != null ? result.imageUrl : '/images/default-team.png'}" 
+                                                     class="team-logo" th:alt="${result.displayName}">
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1" th:text="${result.displayName}">Name</h6>
+                                                <p class="card-text text-muted small mb-2" th:text="${result.description}">Description</p>
+                                                <div class="d-flex align-items-center">
+                                                    <span th:if="${result.type == 'player'}" class="badge bg-primary me-2">
+                                                        <i class="fas fa-user me-1"></i>球员
+                                                    </span>
+                                                    <span th:if="${result.type == 'team'}" class="badge bg-success me-2">
+                                                        <i class="fas fa-shield-alt me-1"></i>球队
+                                                    </span>
+                                                    <a th:href="${result.detailUrl}" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-external-link-alt me-1"></i>查看详情
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- News Section -->
+                        <div th:if="${articles != null and !articles.isEmpty()}" class="mb-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-newspaper text-warning me-2"></i>相关新闻
+                            </h4>
+                            <div class="row">
+                                <div th:each="article : ${articles}" class="col-lg-12 mb-4">
+                                    <div class="card h-100 shadow-sm article-card-hover">
+                                         <div class="card-body">
+                                             <h5 class="card-title" th:text="${article.titleCn != null ? article.titleCn : article.title}">Article Title</h5>
+                                             <h6 class="card-subtitle mb-2 text-muted" th:text="${article.source} + ' - ' + ${#temporals.format(article.publishDate, 'MMM dd, yyyy HH:mm')}">Source and Date</h6>
+                                             <p class="card-text" th:text="${article.summaryAiCn != null ? article.summaryAiCn : article.summaryAi}"></p>
+                                         </div>
+                                         <div class="card-footer bg-transparent border-0">
+                                              <a th:href="@{/article/{id}(id=${article.id})}" class="btn btn-primary btn-sm">阅读更多</a>
+                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Results -->
+                        <div th:if="${(searchResults == null or searchResults.isEmpty()) and (articles == null or articles.isEmpty())}" class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>没有找到相关结果。
+                        </div>
+                    </div>
+
+                    <!-- Players and Teams Tab -->
+                    <div class="tab-pane fade" id="players-teams" role="tabpanel">
+                        <div th:if="${searchResults != null and !searchResults.isEmpty()}" class="row">
+                            <div th:each="result : ${searchResults}" class="col-lg-6 col-xl-4 mb-4">
+                                <div class="card search-result-card h-100">
+                                    <div class="card-body d-flex align-items-center">
+                                        <div class="me-3">
+                                            <img th:if="${result.type == 'player'}" th:src="${result.imageUrl != null ? result.imageUrl : '/images/default-player.png'}" 
+                                                 class="player-avatar" th:alt="${result.displayName}">
+                                            <img th:if="${result.type == 'team'}" th:src="${result.imageUrl != null ? result.imageUrl : '/images/default-team.png'}" 
+                                                 class="team-logo" th:alt="${result.displayName}">
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="card-title mb-1" th:text="${result.displayName}">Name</h6>
+                                            <p class="card-text text-muted small mb-2" th:text="${result.description}">Description</p>
+                                            <div class="d-flex align-items-center">
+                                                <span th:if="${result.type == 'player'}" class="badge bg-primary me-2">
+                                                    <i class="fas fa-user me-1"></i>球员
+                                                </span>
+                                                <span th:if="${result.type == 'team'}" class="badge bg-success me-2">
+                                                    <i class="fas fa-shield-alt me-1"></i>球队
+                                                </span>
+                                                <a th:href="${result.detailUrl}" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-external-link-alt me-1"></i>查看详情
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div th:if="${searchResults == null or searchResults.isEmpty()}" class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>没有找到相关球员或球队。
+                        </div>
+                    </div>
+
+                    <!-- News Tab -->
+                    <div class="tab-pane fade" id="news" role="tabpanel">
+                        <div th:if="${articles != null and !articles.isEmpty()}" class="row">
+                            <div th:each="article : ${articles}" class="col-lg-12 mb-4">
+                                <div class="card h-100 shadow-sm article-card-hover">
+                                     <div class="card-body">
+                                         <h5 class="card-title" th:text="${article.titleCn != null ? article.titleCn : article.title}">Article Title</h5>
+                                         <h6 class="card-subtitle mb-2 text-muted" th:text="${article.source} + ' - ' + ${#temporals.format(article.publishDate, 'MMM dd, yyyy HH:mm')}">Source and Date</h6>
+                                         <p class="card-text" th:text="${article.summaryAiCn != null ? article.summaryAiCn : article.summaryAi}"></p>
+                                     </div>
+                                     <div class="card-footer bg-transparent border-0">
+                                          <a th:href="@{/article/{id}(id=${article.id})}" class="btn btn-primary btn-sm">阅读更多</a>
+                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div th:if="${articles == null or articles.isEmpty()}" class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>没有找到相关新闻。
                         </div>
                     </div>
                 </div>

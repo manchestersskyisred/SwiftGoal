@@ -35,21 +35,44 @@ public class AIService {
     private String deepSeekApiKey;
 
     private final String deepSeekApiUrl = "https://api.deepseek.com/chat/completions";
+    private final String localTranslateApiUrl = "http://127.0.0.1:8000/translate/";
 
     public AiAnalysisResult getAiAnalysisForArticle(String title, String content) {
+        // Step 1: Translate title using the local model
+        String translatedTitle;
+        try {
+            translatedTitle = translateWithLocalModel(title);
+            if (translatedTitle == null || translatedTitle.isBlank()) {
+                logger.error("Local translation failed for title: {}", title);
+                // Fallback or error handling
+                translatedTitle = title; // Use original title as fallback
+            }
+        } catch (Exception e) {
+            logger.error("Error calling local translation model for title '{}': {}", title, e.getMessage(), e);
+            translatedTitle = title; // Fallback to original title
+        }
+
+        // Step 2: Use DeepSeek for summary, keywords, and partition
         String prompt = "我将为您提供一个体育新闻的标题和正文。请分析它们并以JSON格式返回以下信息： " +
-                "1. `translatedTitle`: 将标题翻译成简体中文。 " +
-                "2. `chineseSummary`: 生成一个80-120字的简体中文摘要。 " +
-                "3. `keywords`: 提取3-5个相关的简体中文关键词，以逗号分隔。 " +
-                "4. `partition`: 将文章分类到以下之一的简体中文分区：NBA, 英超, 西甲, 德甲, 法甲, 意甲, 沙特联, 女足, MLB, 网球, 综合体育。 " +
-                "标题是：\"" + title + "\"。正文是：\"" + content.substring(0, Math.min(content.length(), 3500)) + "\"。";
+                "1. `chineseSummary`: 生成一个80-120字的简体中文摘要。 " +
+                "2. `keywords`: 提取3-5个相关的简体中文关键词，以逗号分隔。 " +
+                "3. `partition`: 将文章分类到以下之一的简体中文分区：NBA, 英超, 西甲, 德甲, 法甲, 意甲, 沙特联, 女足, MLB, 网球, 综合体育。 " +
+                "标题是：\"" + translatedTitle + "\"。正文是：\"" + content.substring(0, Math.min(content.length(), 3500)) + "\"。";
 
         try {
             String jsonResponse = makeDeepSeekRequest(prompt);
-            return parseJsonResponse(jsonResponse);
+            AiAnalysisResult result = parseJsonResponse(jsonResponse);
+            if (result != null) {
+                // Manually set the translated title obtained from the local model
+                result.setTranslatedTitle(translatedTitle);
+            }
+            return result;
         } catch (Exception e) {
             logger.error("Error during AI analysis for title '{}': {}", title, e.getMessage(), e);
-            return null;
+            // Return a result with at least the translated title if DeepSeek fails
+            AiAnalysisResult fallbackResult = new AiAnalysisResult();
+            fallbackResult.setTranslatedTitle(translatedTitle);
+            return fallbackResult;
         }
     }
     
@@ -81,6 +104,36 @@ public class AIService {
         } catch (Exception e) {
             logger.error("Error during batch translation: {}", e.getMessage(), e);
             return text; // Return original text on failure
+        }
+    }
+
+    private String translateWithLocalModel(String textToTranslate) throws IOException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", "application/json");
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("text", textToTranslate);
+        body.put("source_lang", "English");
+        body.put("target_lang", "Chinese");
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            logger.info("Calling local translation service for text: '{}'", textToTranslate);
+            ResponseEntity<String> response = restTemplate.exchange(localTranslateApiUrl, HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode rootNode = objectMapper.readTree(response.getBody());
+                String translatedText = rootNode.path("translated_text").asText();
+                logger.info("Local translation successful. Result: '{}'", translatedText);
+                return translatedText;
+            } else {
+                logger.error("Local translation request failed with status: {} and body: {}", response.getStatusCode(), response.getBody());
+                return null;
+            }
+        } catch (Exception e) {
+            logger.error("Exception occurred while calling local translation service: {}", e.getMessage(), e);
+            throw new IOException("Failed to call local translation service", e);
         }
     }
 
@@ -142,40 +195,29 @@ public class AIService {
         throw new IOException("Invalid response format: 'choices' array is missing or empty.");
     }
     
-    private AiAnalysisResult parseJsonResponse(String jsonString) {
+    private AiAnalysisResult parseJsonResponse(String jsonResponse) {
+        if (jsonResponse == null || jsonResponse.isBlank()) {
+            logger.error("JSON response is null or empty, cannot parse.");
+            return null;
+        }
         try {
-            logger.debug("Parsing AI JSON response: {}", jsonString);
-
-            // The string is now the direct content, which should be the JSON block
-            String jsonBlock = jsonString; 
-            
-            // Minor cleanup in case the AI wraps the JSON in markdown
-            if (jsonBlock.startsWith("```json")) {
-                jsonBlock = jsonBlock.substring(7, jsonBlock.length() - 3).trim();
-            } else {
-                 Matcher matcher = Pattern.compile("\\{.*\\}", Pattern.DOTALL).matcher(jsonBlock);
-                 if (matcher.find()) {
-                    jsonBlock = matcher.group();
-                 } else {
-                    logger.warn("No JSON object found in the content: {}", jsonString);
-                    return null;
-                 }
-            }
-
-            logger.debug("Extracted JSON block for parsing: {}", jsonBlock);
-            AiAnalysisResult result = objectMapper.readValue(jsonBlock, AiAnalysisResult.class);
-            
-            // Basic validation
-            if (result.getTranslatedTitle() == null || result.getChineseSummary() == null) {
-                 logger.warn("Parsed JSON, but key fields are null. Original content: {}", jsonString);
-                 return null;
-            }
-            
-            logger.info("Successfully parsed AI analysis result.");
-            return result;
-
+            logger.debug("Parsing JSON response: {}", jsonResponse);
+            return objectMapper.readValue(jsonResponse, AiAnalysisResult.class);
         } catch (JsonProcessingException e) {
-            logger.error("Failed to parse JSON from AI response: {}", jsonString, e);
+            logger.error("Error parsing JSON response: {}", jsonResponse, e);
+            // Attempt to extract the content string if direct mapping fails
+            try {
+                JsonNode rootNode = objectMapper.readTree(jsonResponse);
+                String content = rootNode.path("choices").get(0).path("message").path("content").asText();
+                if (content != null && !content.isEmpty()) {
+                    logger.warn("Direct mapping to AiAnalysisResult failed. Attempting to parse content string.");
+                    // Clean the content string: remove ```json and ```
+                    String cleanedContent = content.trim().replace("```json", "").replace("```", "").trim();
+                    return objectMapper.readValue(cleanedContent, AiAnalysisResult.class);
+                }
+            } catch (Exception innerEx) {
+                logger.error("Failed to parse content string from JSON response as well.", innerEx);
+            }
             return null;
         }
     }

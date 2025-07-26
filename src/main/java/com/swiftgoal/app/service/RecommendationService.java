@@ -2,90 +2,110 @@ package com.swiftgoal.app.service;
 
 import com.swiftgoal.app.repository.entity.NewsArticle;
 import com.swiftgoal.app.repository.entity.User;
-import com.swiftgoal.app.repository.NewsArticleRepository;
+import com.swiftgoal.app.dto.NewsArticleDto;
 import com.swiftgoal.app.repository.BrowsingHistoryRepository;
+import com.swiftgoal.app.repository.NewsArticleRepository;
+import com.swiftgoal.app.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.swiftgoal.app.repository.entity.BrowsingHistory;
 
 @Service
 public class RecommendationService {
 
     private static final Logger logger = LoggerFactory.getLogger(RecommendationService.class);
 
-    @Autowired
-    private NewsArticleRepository newsArticleRepository;
+    private final UserRepository userRepository;
+    private final NewsArticleRepository newsArticleRepository;
+    private final BrowsingHistoryRepository browsingHistoryRepository;
+    private final NewsArticleService newsArticleService;
 
-    @Autowired
-    private BrowsingHistoryRepository browsingHistoryRepository;
-
-    public List<NewsArticle> getRecommendationsForUser(User user, int limit) {
-        logger.info("Generating recommendations for user: {}", user.getUsername());
-
-        List<String> userCategories = browsingHistoryRepository.findByUserOrderByViewedAtDesc(user).stream()
-                .map(history -> history.getNewsArticle().getCategoryAi())
-                .distinct()
-                .collect(Collectors.toList());
-        
-        if (userCategories.isEmpty()) {
-            logger.info("User {} has no browsing history. Returning latest articles.", user.getUsername());
-            return newsArticleRepository.findNonUserGeneratedArticles().stream().limit(limit).collect(Collectors.toList());
-        }
-
-        logger.info("User {} has interest in categories: {}", user.getUsername(), userCategories);
-
-        List<NewsArticle> recommendedArticles = userCategories.stream()
-                .flatMap(category -> newsArticleRepository.findByCategory(category).stream())
-                .distinct()
-                .limit(limit)
-                .collect(Collectors.toList());
-        
-        logger.info("Found {} recommended articles for user {}", recommendedArticles.size(), user.getUsername());
-
-        return recommendedArticles;
+    public RecommendationService(UserRepository userRepository, NewsArticleRepository newsArticleRepository, BrowsingHistoryRepository browsingHistoryRepository, NewsArticleService newsArticleService) {
+        this.userRepository = userRepository;
+        this.newsArticleRepository = newsArticleRepository;
+        this.browsingHistoryRepository = browsingHistoryRepository;
+        this.newsArticleService = newsArticleService;
     }
 
+    @Transactional(readOnly = true)
+    public List<NewsArticleDto> getLatestArticles(int limit) {
+        PageRequest pageRequest = PageRequest.of(0, limit, Sort.by("publishDate").descending());
+        return newsArticleRepository.findAll(pageRequest).stream()
+                .map(NewsArticleDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAvailableCategories() {
+        return newsArticleRepository.findDistinctCategories();
+    }
+
+    @Transactional(readOnly = true)
+    public List<NewsArticle> getDefaultRecommendations(Set<Long> seenArticleIds, int limit) {
+        // Fallback: return latest articles excluding seen ones
+        PageRequest pageRequest = PageRequest.of(0, limit + seenArticleIds.size(), Sort.by("publishDate").descending());
+
+        return newsArticleRepository.findAll(pageRequest).stream()
+                .filter(article -> !seenArticleIds.contains(article.getId()))
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public Page<NewsArticle> getRecommendationsForUserPaginated(User user, Pageable pageable) {
         logger.info("Generating paginated recommendations for user: {}", user.getUsername());
 
-        List<String> userCategories = browsingHistoryRepository.findByUserOrderByViewedAtDesc(user).stream()
-                .map(history -> history.getNewsArticle().getCategoryAi())
-                .distinct()
+        List<Long> userHistoryArticleIds = browsingHistoryRepository.findByUserOrderByViewedAtDesc(user).stream()
+                .map(history -> history.getNewsArticle().getId())
                 .collect(Collectors.toList());
 
-        if (userCategories.isEmpty()) {
+        if (userHistoryArticleIds.isEmpty()) {
             logger.info("User {} has no browsing history. Returning latest articles.", user.getUsername());
             return newsArticleRepository.findAll(pageable);
         }
 
-        logger.info("User {} has interest in categories: {}", user.getUsername(), userCategories);
+        Map<String, Long> categoryFrequency = userHistoryArticleIds.stream()
+                .map(newsArticleService::findById) // Use the service to safely find articles by ID
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(NewsArticle::getCategoryAi)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-        List<NewsArticle> recommendedArticles = userCategories.stream()
-                .flatMap(category -> newsArticleRepository.findByCategory(category).stream())
-                .distinct()
+        if (categoryFrequency.isEmpty()) {
+            logger.info("User {} has no valid categories in history. Returning latest articles.", user.getUsername());
+            return newsArticleRepository.findAll(pageable);
+        }
+
+        List<String> sortedCategories = categoryFrequency.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
-        
+
+        logger.info("User {} has interest in categories: {}", user.getUsername(), sortedCategories);
+
+        List<NewsArticle> recommendedArticles = sortedCategories.stream()
+                .flatMap(category -> newsArticleRepository.findByCategoryAi(category, PageRequest.of(0, 20)).stream())
+                .distinct()
+                .filter(article -> !userHistoryArticleIds.contains(article.getId()))
+                .collect(Collectors.toList());
+
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), recommendedArticles.size());
-        
-        List<NewsArticle> pageContent = recommendedArticles.subList(start, end);
-        
-        return new PageImpl<>(pageContent, pageable, recommendedArticles.size());
-    }
 
-    public List<NewsArticle> getLatestArticles(int limit) {
-        return newsArticleRepository.findNonUserGeneratedArticles().stream().limit(limit).collect(Collectors.toList());
-    }
-
-    public List<String> getAvailableCategories() {
-        return newsArticleRepository.findDistinctCategories();
+        return new PageImpl<>(recommendedArticles.subList(start, end), pageable, recommendedArticles.size());
     }
 
     public List<NewsArticle> getArticlesByCategory(String category, int limit) {
