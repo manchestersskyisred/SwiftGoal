@@ -1,0 +1,36 @@
+# Maven build output
+target/
+
+# IDE files
+.idea/
+*.iml
+*.iws
+.classpath
+.project
+.settings/
+
+# Log files
+*.log
+logs/
+
+# Runtime files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Local environment files
+.env
+
+# macOS files
+.DS_Store
+
+# User-specific files (safer to ignore the directories)
+/user-avatars/
+/upload-dir/
+scraper.log
+cookies.txt
+
+# Do not commit the model files directly if not using submodules
+# Qwen2.5-0.5B/ 

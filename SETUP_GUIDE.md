@@ -6,7 +6,7 @@
 
 该项目包含两个核心部分：
 *   **Java 后端 (SwiftGoal-App)**: 基于 Spring Boot，负责数据管理、业务逻辑和 Web 界面。
-*   **Python AI 服务 (AI-Service)**: 基于 `transformers` 和 `FastAPI`，负责提供本地化的 AI 翻译功能。
+*   **Python AI 服务 (AI-Service)**: 基于 `transformers` 和 `FastAPI`，使用一个本地化的 AI 模型提供翻译功能。
 
 为了完整地运行本项目，您需要同时启动这两个服务。
 
@@ -15,20 +15,30 @@
 在开始之前，请确保您的系统已安装以下软件：
 
 *   **Java**: 版本 17 或更高
-*   **Maven**: 版本 3.x 或更高 (用于构建 Java 项目)
+*   **Maven**: 版本 3.x 或更高
 *   **Python**: 版本 3.8 或更高
-*   **Git**: 用于获取项目代码
+*   **Git**: 版本 2.13 或更高 (支持 `--recurse-submodules`)
+*   **Git LFS**: 用于下载大体积的模型文件 (`git lfs install` 进行安装)
 *   **数据库**: PostgreSQL (推荐) 或 MySQL
 
 ## 3. 环境搭建步骤
 
-### 3.1. 获取项目代码
+### 3.1. 获取项目代码 (包含 AI 模型)
 
-打开终端，使用 Git 克隆本仓库到您的本地计算机：
+打开终端，使用以下命令克隆本仓库。`--recurse-submodules` 参数会自动初始化并下载作为子模块的 AI 模型。
+
 ```bash
-git clone <your-repository-url>
+git clone --recurse-submodules <your-repository-url>
 cd SwiftGoal
 ```
+
+> **如果已经克隆过项目**:
+> 如果您之前已经克隆了项目但没有下载子模块，请运行以下命令来获取模型文件：
+> ```bash
+> git submodule update --init --recursive
+> ```
+
+下载完成后，您的项目根目录下应该会有一个 `Qwen2.5-0.5B` 文件夹，其中包含了模型文件。
 
 ### 3.2. 数据库设置
 
@@ -61,18 +71,18 @@ cd SwiftGoal
         ```
     *   **Football-Data.org API Key**: 用于导入足球联赛/球队/球员数据。
         ```properties
-        api.football-data.token=YOUR_FOOTBALL_DATA_API_KEY
+        api.football-data.token: YOUR_FOOTBALL_DATA_API_KEY
         ```
 
 ### 3.4. 配置 Python AI 服务 (AI-Service)
 
-本项目使用一个本地的 Python 服务来进行文本翻译。
+本项目使用一个本地的 Python 服务来进行文本翻译，模型文件已通过 Git Submodule 提供。
 
 1.  **安装 Python 依赖库**。在项目根目录运行：
     ```bash
     pip install "transformers[torch]" accelerate fastapi uvicorn python-multipart
     ```
-2.  **模型下载**：该服务使用 `Qwen/Qwen2.5-0.5B` 模型。当您第一次启动 Python 服务时，`transformers` 库会自动从 Hugging Face Hub 下载模型文件。这可能需要一些时间，取决于您的网络状况。模型下载后会缓存在本地。
+2.  **确认模型路径**：`translation_server.py` 脚本已配置为从本地的 `./Qwen2.5-0.5B` 目录加载模型，无需修改。
 
 ## 4. 运行项目
 
